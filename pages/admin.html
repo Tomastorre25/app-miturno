@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admin - Mi Turno</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script type="module" src="../js/admin.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(console.error);
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <a class="logo" href="../index.html"><img src="../media/logo-blanco.png" alt="Mi Turno"></a>
+                        <ul class="navbar">
+                <li><a class="nav-item" href="../index.html">Reservar</a></li>
+                <li><a class="nav-item" href="./profesionales.html">Profesionales</a></li>
+                <li><a class="nav-item" href="./contacto.html">Contacto</a></li>
+                <li><a class="nav-item" href="./turnos.html">Mis Turnos</a></li>
+                <li><a class="nav-item nav-item-admin" href="#">Admin</a></li>
+            </ul>
+            <button class="hamburger" id="menuHamburger" aria-label="Menú">
+                <span></span><span></span><span></span>
+            </button>
+        </nav>
+    </header>
+    <main>
+        <div class="container">
+
+            <!-- LOGIN -->
+            <div id="loginSection" class="paso-container">
+                <div class="card" style="max-width:400px;margin:60px auto;">
+                    <div class="card-body">
+                        <h2 class="card-title text-center">Panel de Administración</h2>
+                        <p class="light-text text-center" style="margin-bottom:20px;">Acceso exclusivo para el equipo</p>
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" id="adminEmail" class="form-control" placeholder="tu@email.com">
+                        </div>
+                        <div class="form-group" style="margin-top:15px;">
+                            <label class="form-label">Contraseña</label>
+                            <input type="password" id="adminPass" class="form-control" placeholder="••••••••">
+                        </div>
+                        <p id="loginError" style="color:#dc3545;font-size:13px;margin-top:10px;"></p>
+                        <button class="btn btn-primary" id="btnLogin" style="width:100%;margin-top:15px;">Ingresar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL -->
+            <div id="panelSection" class="ocultar">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+                    <h1 style="margin-bottom:0;">Panel Admin</h1>
+                    <button class="btn btn-secondary" id="btnLogout">Cerrar Sesión</button>
+                </div>
+
+                <!-- Estadísticas -->
+                <div class="stats-container">
+                    <div class="stat-card"><div class="stat-numero" id="statTotal">-</div><div class="stat-label">Total Turnos</div></div>
+                    <div class="stat-card"><div class="stat-numero" id="statProximos">-</div><div class="stat-label">Próximos</div></div>
+                    <div class="stat-card"><div class="stat-numero" id="statHoy">-</div><div class="stat-label">Hoy</div></div>
+                    <div class="stat-card"><div class="stat-numero" id="statUsuarios">-</div><div class="stat-label">Usuarios</div></div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="seccion-tabs">
+                    <button class="btn btn-primary" id="btnSeccionTurnos">Turnos</button>
+                    <button class="btn btn-secondary" id="btnSeccionUsuarios">Usuarios</button>
+                    <button class="btn btn-secondary" id="btnSeccionProfesionales">Profesionales</button>
+                    <button class="btn btn-secondary" id="btnSeccionServicios">Servicios</button>
+                    <button class="btn btn-secondary" id="btnSeccionHorarios">Horarios</button>
+                </div>
+
+                <!-- TURNOS -->
+                <div id="seccionTurnos">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;flex-wrap:wrap;gap:10px;">
+                        <button class="btn btn-success" id="btnNuevoTurnoAdmin">Agregar Turno</button>
+                        <button class="btn btn-primary" id="btnVista">Ver Calendario</button>
+                    </div>
+                    <div class="card" style="margin-bottom:20px;">
+                        <div class="card-body">
+                            <div class="filtros-container">
+                                <div>
+                                    <label class="form-label">Filtrar por profesional:</label>
+                                    <select id="filtroProfesional" class="form-control"><option value="">Todos</option></select>
+                                </div>
+                                <div>
+                                    <label class="form-label">Filtrar por fecha:</label>
+                                    <input type="date" id="filtroFecha" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p id="loadingMsg" class="light-text text-center ocultar" style="padding:20px;">Cargando turnos...</p>
+                    <div id="vistaLista"><div id="turnosListaContainer"></div></div>
+                    <div id="vistaCalendario" class="ocultar">
+                        <div class="card"><div class="card-body">
+                            <div class="cal-nav">
+                                <button class="btn btn-secondary" id="btnMesAnterior">‹</button>
+                                <h2 class="card-title" id="mesLabel" style="margin:0;"></h2>
+                                <button class="btn btn-secondary" id="btnMesSiguiente">›</button>
+                            </div>
+                            <div id="calendarioContainer" class="calendario-grid"></div>
+                        </div></div>
+                    </div>
+                </div>
+
+                <!-- USUARIOS -->
+                <div id="seccionUsuarios" class="ocultar">
+                    <div class="card" style="margin-bottom:20px;">
+                        <div class="card-body">
+                            <label class="form-label">Buscar usuario:</label>
+                            <input type="text" id="filtroUsuario" class="form-control" placeholder="Nombre, email o teléfono...">
+                        </div>
+                    </div>
+                    <div id="usuariosContainer"></div>
+                </div>
+
+                <!-- PROFESIONALES -->
+                <div id="seccionProfesionales" class="ocultar">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <h2 style="color:white;margin:0;">Profesionales</h2>
+                        <button class="btn btn-success" id="btnAgregarProfesional">Agregar Profesional</button>
+                    </div>
+                    <div id="profesionalesAdminContainer"></div>
+                </div>
+
+                <!-- HORARIOS -->
+                <div id="seccionHorarios" class="ocultar">
+                    <div class="card" style="margin-bottom:20px;">
+                        <div class="card-body">
+                            <label class="form-label">Seleccioná un profesional para editar sus horarios:</label>
+                            <select id="selectorProfHorarios" class="form-control">
+                                <option value="">-- Seleccioná un profesional --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="horariosEditorContainer" class="ocultar">
+                        <h2 id="horariosEditorTitulo" style="color:white;margin-bottom:15px;"></h2>
+                        <div class="card" style="margin-bottom:20px;">
+                            <div class="card-body" id="infoIntervalos"></div>
+                        </div>
+                        <div id="horariosListaContainer"></div>
+                    </div>
+                </div>
+
+                <!-- SERVICIOS -->
+                <div id="seccionServicios" class="ocultar">
+                    <div class="card" style="margin-bottom:20px;">
+                        <div class="card-body">
+                            <label class="form-label">Seleccioná un profesional para editar sus servicios:</label>
+                            <select id="selectorProfServicios" class="form-control">
+                                <option value="">-- Seleccioná un profesional --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="serviciosEditorContainer" class="ocultar">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                            <h2 id="serviciosEditorTitulo" style="color:white;margin:0;"></h2>
+                            <button class="btn btn-success" id="btnAgregarServicio">Agregar Servicio</button>
+                        </div>
+                        <div id="serviciosListaContainer"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal turnos del día -->
+    <div id="modalDia" class="modal-overlay ocultar">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitulo" class="card-title" style="margin:0;"></h2>
+                <button id="modalCerrar" class="btn btn-secondary"></button>
+            </div>
+            <div id="modalContenido" class="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Modal Profesional -->
+    <div id="modalProfesional" class="modal-overlay ocultar">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h2 id="modalProfTitulo" class="card-title" style="margin:0;"></h2>
+                <button id="modalProfCerrar" class="btn btn-secondary"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="profId">
+                <div class="form-group">
+                    <label class="form-label">Nombre *</label>
+                    <input type="text" id="profNombre" class="form-control" placeholder="Ej: Tomas">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Descripción</label>
+                    <textarea id="profDescripcion" class="form-control" rows="3" placeholder="Descripción breve del profesional..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Especialidades (una por línea)</label>
+                    <textarea id="profEspecialidades" class="form-control" rows="3" placeholder="Cortes clásicos y modernos&#10;Diseño de barba&#10;Tratamientos capilares"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">URL de foto (opcional)</label>
+                    <input type="text" id="profFoto" class="form-control" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Orden (posición en la lista)</label>
+                    <input type="number" id="profOrden" class="form-control" value="0" min="0">
+                </div>
+                <p id="profMsg" class="form-error"></p>
+                <button class="btn btn-primary" id="btnGuardarProfesional" style="width:100%;margin-top:10px;">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Servicio -->
+    <div id="modalServicio" class="modal-overlay ocultar">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h2 id="modalServTitulo" class="card-title" style="margin:0;"></h2>
+                <button id="modalServCerrar" class="btn btn-secondary"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="servId">
+                <input type="hidden" id="servProfId">
+                <div class="form-group">
+                    <label class="form-label">Nombre *</label>
+                    <input type="text" id="servNombre" class="form-control" placeholder="Ej: Corte y Barba">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Precio *</label>
+                    <input type="text" id="servPrecio" class="form-control" placeholder="Ej: $15.000">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Duración *</label>
+                    <input type="text" id="servDuracion" class="form-control" placeholder="Ej: 30 min">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Orden</label>
+                    <input type="number" id="servOrden" class="form-control" value="0" min="0">
+                </div>
+                <p id="servMsg" class="form-error"></p>
+                <button class="btn btn-primary" id="btnGuardarServicio" style="width:100%;margin-top:10px;">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const hamburger = document.getElementById('menuHamburger');
+        const navbar = document.querySelector('.navbar');
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('open');
+            navbar.classList.toggle('open');
+        });
+        // Close on nav item click
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                hamburger.classList.remove('open');
+                navbar.classList.remove('open');
+            });
+        });
+    </script>
+
+    <!-- Modal Nuevo/Editar Turno -->
+    <div id="modalTurnoAdmin" class="modal-overlay ocultar">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h2 id="modalTurnoTitulo" class="card-title" style="margin:0;color:white;"></h2>
+                <button id="modalTurnoCerrar" class="btn btn-secondary">X</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="turnoEditId">
+                <div class="form-group">
+                    <label class="form-label">Profesional *</label>
+                    <select id="turnoAdminProfesional" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Servicio *</label>
+                    <select id="turnoAdminServicio" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Fecha *</label>
+                    <input type="date" id="turnoAdminFecha" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Horario *</label>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <select id="turnoAdminHorario" class="form-control" style="flex:1;"></select>
+                        <span style="color:#aaa;font-size:13px;white-space:nowrap;">o personalizado:</span>
+                        <input type="time" id="turnoAdminHorarioCustom" class="form-control" style="flex:1;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nombre del cliente *</label>
+                    <input type="text" id="turnoAdminNombre" class="form-control" placeholder="Nombre y apellido">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Telefono</label>
+                    <input type="tel" id="turnoAdminTelefono" class="form-control" placeholder="+54 9 ...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="turnoAdminEmail" class="form-control" placeholder="cliente@email.com">
+                </div>
+                <p id="turnoAdminMsg" class="form-error"></p>
+                <button class="btn btn-primary" id="btnGuardarTurnoAdmin" style="width:100%;margin-top:10px;">Guardar Turno</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

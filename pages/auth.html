@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ingresar - Mi Turno</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script type="module" src="../js/auth.js"></script>
+</head>
+<body>
+    <header>
+        <nav>
+            <a class="logo" href="../index.html"><img src="../media/logo-blanco.png" alt="Mi Turno"></a>
+                                    <ul class="navbar">
+                <li><a class="nav-item" href="../index.html">Reservar</a></li>
+                <li><a class="nav-item" href="./profesionales.html">Profesionales</a></li>
+                <li><a class="nav-item" href="./contacto.html">Contacto</a></li>
+                <li><a class="nav-item" href="./turnos.html">Mis Turnos</a></li>
+                <li><a class="nav-item nav-item-admin" href="./admin.html">Admin</a></li>
+            </ul>
+            <button class="hamburger" id="menuHamburger" aria-label="Menú">
+                <span></span><span></span><span></span>
+            </button>
+        </nav>
+    </header>
+    <main>
+        <div class="container">
+            <div class="card" style="max-width:460px;margin:40px auto;">
+                <div class="card-body">
+                    <h2 class="card-title text-center">Mi Turno</h2>
+
+                    <!-- Tabs -->
+                    <div class="tabs-container">
+                        <button class="tab-btn tab-active" id="tabLogin">Ingresar</button>
+                        <button class="tab-btn" id="tabRegistro">Crear Cuenta</button>
+                    </div>
+
+                    <!-- Form Login -->
+                    <div id="formLogin">
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" id="loginEmail" class="form-control" placeholder="tu@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Contraseña</label>
+                            <input type="password" id="loginPass" class="form-control" placeholder="••••••••">
+                        </div>
+                        <p id="loginError" class="form-error"></p>
+                        <div id="reenviarVerificacion" class="ocultar" style="margin-top:10px;padding:12px;background:#fff8e1;border:1px solid #ffc107;border-radius:6px;font-size:13px;">
+                            <p style="color:#555;margin-bottom:8px;">No verificaste el email de <strong id="reenviarEmail"></strong></p>
+                            <button class="btn btn-secondary btn-sm" id="btnReenviar">Reenviar email de verificacion</button>
+                        </div>
+                        <button class="btn btn-primary" id="btnLogin" style="width:100%;margin-top:10px;">Ingresar</button>
+                    </div>
+
+                    <!-- Mensaje verificacion -->
+                    <div id="mensajeVerificacion" class="ocultar" style="text-align:center;padding:20px 0;">
+                        <div style="font-size:48px;margin-bottom:15px;">&#9993;</div>
+                        <h3 style="color:#333;margin-bottom:10px;">Verificá tu email</h3>
+                        <p style="color:#666;margin-bottom:15px;">Te enviamos un link de verificacion a tu email. Hacé clic en el link y luego ingresá con tu cuenta.</p>
+                        <button class="btn btn-secondary" id="btnVolver" onclick="document.getElementById('mensajeVerificacion').classList.add('ocultar');document.getElementById('formLogin').classList.remove('ocultar');document.getElementById('tabLogin').classList.add('tab-active');document.getElementById('tabRegistro').classList.remove('tab-active');">Ir al Login</button>
+                    </div>
+
+                    <!-- Form Registro -->
+                    <div id="formRegistro" class="ocultar">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Nombre *</label>
+                                <input type="text" id="regNombre" class="form-control" placeholder="Juan">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Apellido *</label>
+                                <input type="text" id="regApellido" class="form-control" placeholder="Pérez">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Teléfono *</label>
+                            <input type="tel" id="regTelefono" class="form-control" placeholder="11 1234-5678">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email *</label>
+                            <input type="email" id="regEmail" class="form-control" placeholder="tu@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Contraseña *</label>
+                            <input type="password" id="regPass" class="form-control" placeholder="Mínimo 6 caracteres">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Repetir Contraseña *</label>
+                            <input type="password" id="regPass2" class="form-control" placeholder="••••••••">
+                        </div>
+                        
+                        
+                        </div>
+                        <p id="regError" class="form-error"></p>
+                        <button class="btn btn-primary" id="btnRegistro" style="width:100%;margin-top:10px;">Crear Cuenta</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>
+        const hamburger = document.getElementById('menuHamburger');
+        const navbar = document.querySelector('.navbar');
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('open');
+            navbar.classList.toggle('open');
+        });
+        // Close on nav item click
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                hamburger.classList.remove('open');
+                navbar.classList.remove('open');
+            });
+        });
+    </script>
+</body>
+</html>

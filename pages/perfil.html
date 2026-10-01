@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Perfil - Mi Turno</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script type="module" src="../js/perfil.js"></script>
+</head>
+<body>
+    <header>
+        <nav>
+            <a class="logo" href="../index.html"><img src="../media/logo-blanco.png" alt="Mi Turno"></a>
+                                    <ul class="navbar">
+                <li><a class="nav-item" href="../index.html">Reservar</a></li>
+                <li><a class="nav-item" href="./profesionales.html">Profesionales</a></li>
+                <li><a class="nav-item" href="./contacto.html">Contacto</a></li>
+                <li><a class="nav-item" href="./turnos.html">Mis Turnos</a></li>
+                <li><a class="nav-item nav-item-admin" href="./admin.html">Admin</a></li>
+            </ul>
+            <button class="hamburger" id="menuHamburger" aria-label="Menú">
+                <span></span><span></span><span></span>
+            </button>
+        </nav>
+    </header>
+    <main>
+        <div class="container">
+            <h1>Mi Perfil</h1>
+
+            <div style="max-width:600px;margin:0 auto;">
+
+                <!-- Datos personales -->
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="card-title">Datos Personales</h2>
+                        <p class="light-text" style="margin-bottom:15px;">Cliente desde: <span id="perfilCreadoEn"></span></p>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Nombre</label>
+                                <input type="text" id="perfilNombre" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Apellido</label>
+                                <input type="text" id="perfilApellido" class="form-control">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Teléfono</label>
+                            <input type="tel" id="perfilTelefono" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" id="perfilEmail" class="form-control" disabled style="background:#f5f5f5;">
+                        </div>
+                        <div class="form-group" style="margin-top:5px;">
+                            <label class="check-label">
+                                <input type="checkbox" id="perfilWpp">
+                                <span>Recibir recordatorios por WhatsApp</span>
+                            </label>
+                            <div id="perfilWppBox" class="wpp-activar-box ocultar">
+                                <p class="wpp-instruccion">Toca el boton para activar CallMeBot en tu WhatsApp. Solo se hace una vez.</p>
+                                <a id="btnActivarWppPerfil" href="#" target="_blank" class="btn btn-wpp">Activar WhatsApp</a>
+                            </div>
+                        </div>
+                        <p id="perfilMsg"></p>
+                        <button class="btn btn-primary" id="btnGuardarPerfil">Guardar Cambios</button>
+                    </div>
+                </div>
+
+                <!-- Cambiar contraseña -->
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="card-title">Cambiar Contraseña</h2>
+                        <div class="form-group">
+                            <label class="form-label">Contraseña actual</label>
+                            <input type="password" id="passActual" class="form-control" placeholder="••••••••">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nueva contraseña</label>
+                            <input type="password" id="passNueva" class="form-control" placeholder="Mínimo 6 caracteres">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Repetir nueva contraseña</label>
+                            <input type="password" id="passNueva2" class="form-control" placeholder="••••••••">
+                        </div>
+                        <p id="passMsg"></p>
+                        <button class="btn btn-primary" id="btnCambiarPass">Actualizar Contraseña</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+    <script>
+        const hamburger = document.getElementById('menuHamburger');
+        const navbar = document.querySelector('.navbar');
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('open');
+            navbar.classList.toggle('open');
+        });
+        // Close on nav item click
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                hamburger.classList.remove('open');
+                navbar.classList.remove('open');
+            });
+        });
+    </script>
+</body>
+</html>
