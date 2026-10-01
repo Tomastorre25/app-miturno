@@ -4,13 +4,11 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 import { enviarEmailConfirmacion, crearNotificacion, mostrarNotifPush, programarRecordatorios, verificarRecordatorios, registrarServiceWorker, solicitarPermisoPush } from './notifications.js';
 import { iniciarCampana } from './notif-ui.js';
 
-const HORARIOS_BASE = ["09:00","09:30","10:00","10:30","11:00","11:30","14:00","14:30","15:00","15:30","16:00","16:30","17:00","17:30","18:00","18:30","19:00","19:30"];
-
+const ADMIN_EMAIL = 'tomasdelatorre15@gmail.com';
 let barberia = { profesionales: [], servicios: {} };
 let reservaActual = { profesional: null, servicio: null, fecha: null, horario: null };
 let usuarioActual = null;
 
-// Registrar el Service Worker al cargar la aplicación
 registrarServiceWorker();
 
 onAuthStateChanged(auth, async (user) => {
@@ -21,37 +19,42 @@ onAuthStateChanged(auth, async (user) => {
   try {
     const userDocRef = doc(db, 'usuarios', user.uid);
     const userDoc = await getDoc(userDocRef);
-    const ADMIN_EMAIL = 'tomasdelatorre15@gmail.com';
+
+    const esAdmin = (user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) ||
+                    (userDoc.exists() && (userDoc.data().esAdmin || userDoc.data().rol === 'admin'));
+
+    if (esAdmin) {
+      usuarioActual = { uid: user.uid, nombre: 'Admin', apellido: '', telefono: '', email: user.email };
+      actualizarNav(usuarioActual);
+      await cargarDatosBarberia();
+      inicializar();
+      iniciarCampana(user.uid, false);
+      verificarRecordatorios().catch(console.error);
+      return;
+    }
 
     if (!userDoc.exists()) {
-      if (user.email === ADMIN_EMAIL) {
-        usuarioActual = { uid: user.uid, nombre: 'Admin', apellido: '', telefono: '', email: user.email };
-        actualizarNav(usuarioActual);
-        await cargarDatosBarberia();
-        inicializar();
-        iniciarCampana(user.uid, false);
-        verificarRecordatorios().catch(console.error);
+      usuarioActual = {
+        uid: user.uid,
+        nombre: user.displayName || 'Cliente',
+        apellido: '',
+        telefono: '',
+        email: user.email
+      };
+    } else {
+      const userData = userDoc.data();
+      if (userData.bloqueado) {
+        await signOut(auth);
+        window.location.href = './pages/auth.html';
         return;
       }
-      await signOut(auth);
-      window.location.href = './pages/auth.html';
-      return;
+      usuarioActual = { uid: user.uid, ...userData };
     }
 
-    const userData = userDoc.data();
-    if (userData.bloqueado) {
-      await signOut(auth);
-      window.location.href = './pages/auth.html';
-      return;
-    }
-
-    usuarioActual = { uid: user.uid, ...userData };
-    actualizarNav(userData);
+    actualizarNav(usuarioActual);
     await cargarDatosBarberia();
     inicializar();
     iniciarCampana(user.uid, false);
-    
-    // Solicitar permiso de notificaciones push en móviles y verificar recordatorios
     solicitarPermisoPush().catch(console.error);
     verificarRecordatorios().catch(console.error);
 
@@ -62,27 +65,31 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// Cargar profesionales y servicios desde Firestore
 async function cargarDatosBarberia() {
-  const profSnap = await getDocs(query(collection(db, 'profesionales'), orderBy('orden')));
-  barberia.profesionales = profSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  barberia.servicios = {};
-  for (const prof of barberia.profesionales) {
-    const servSnap = await getDocs(query(collection(db, `profesionales/${prof.id}/servicios`), orderBy('orden')));
-    barberia.servicios[prof.id] = servSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  try {
+    const profSnap = await getDocs(query(collection(db, 'profesionales'), orderBy('orden')));
+    barberia.profesionales = profSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    barberia.servicios = {};
+    for (const prof of barberia.profesionales) {
+      const servSnap = await getDocs(query(collection(db, `profesionales/${prof.id}/servicios`), orderBy('orden')));
+      barberia.servicios[prof.id] = servSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+  } catch(e) {
+    console.error('Error al cargar datos de la barbería:', e);
   }
 }
 
 function actualizarNav(userData) {
   const navbar = document.querySelector('.navbar');
+  if (!navbar) return;
   const liPerfil = document.createElement('li');
-  liPerfil.innerHTML = `<a href="./pages/perfil.html">${userData.nombre}</a>`;
+  liPerfil.innerHTML = `<a href="./pages/perfil.html">${userData.nombre || 'Perfil'}</a>`;
   const liSalir = document.createElement('li');
   liSalir.innerHTML = `<a href="#" id="btnSalir">Salir</a>`;
   navbar.appendChild(liPerfil);
   navbar.appendChild(liSalir);
 
-  document.getElementById('btnSalir').addEventListener('click', async (e) => {
+  document.getElementById('btnSalir')?.addEventListener('click', async (e) => {
     e.preventDefault();
     await signOut(auth);
     window.location.href = './pages/auth.html';
@@ -98,6 +105,7 @@ function inicializar() {
 
 function mostrarProfesionales() {
   const container = document.getElementById('profesionalesContainer');
+  if (!container) return;
   container.innerHTML = "";
   if (barberia.profesionales.length === 0) {
     container.innerHTML = '<p>No hay profesionales disponibles por el momento.</p>';
@@ -118,13 +126,16 @@ function mostrarProfesionales() {
 function seleccionarProfesional(id, nombre) {
   cacheDia = {};
   reservaActual.profesional = { id, nombre };
-  document.getElementById('profesionalSeleccionado').textContent = nombre;
-  document.getElementById('profesionalFinal').textContent = nombre;
+  const elemSel = document.getElementById('profesionalSeleccionado');
+  const elemFin = document.getElementById('profesionalFinal');
+  if (elemSel) elemSel.textContent = nombre;
+  if (elemFin) elemFin.textContent = nombre;
   mostrarPaso(2);
 }
 
 function mostrarServicios(profesionalId) {
   const container = document.getElementById('serviciosContainer');
+  if (!container) return;
   const servicios = barberia.servicios[profesionalId] || [];
   container.innerHTML = '';
   if (servicios.length === 0) {
@@ -149,7 +160,8 @@ function mostrarServicios(profesionalId) {
 
 function seleccionarServicio(id, nombre, duracion) {
   reservaActual.servicio = { id, nombre, duracion };
-  document.getElementById('servicioFinal').textContent = nombre;
+  const elemFin = document.getElementById('servicioFinal');
+  if (elemFin) elemFin.textContent = nombre;
   mostrarPaso(3);
 }
 
@@ -163,6 +175,7 @@ function getFechaLocalHoy() {
 
 function configurarFecha() {
   const dia = document.getElementById('dia');
+  if (!dia) return;
   const fechaHoy = getFechaLocalHoy();
   dia.min = fechaHoy;
   dia.addEventListener('change', (e) => {
@@ -174,6 +187,7 @@ function configurarFecha() {
 
 function configurarHorario() {
   const dia = document.getElementById('dia');
+  if (!dia) return;
   dia.addEventListener('change', async (e) => {
     if (e.target.value) await mostrarHorarios(e.target.value);
   });
@@ -279,8 +293,10 @@ function generarSlotsParaServicio(horaInicio, horaFin, intervaloMin, bloquesOcup
 
 async function mostrarHorarios(fecha) {
   const container = document.getElementById('horariosDisponibles');
+  if (!container) return;
   container.innerHTML = '<p>Cargando horarios...</p>';
-  document.getElementById('btnConfirmar').disabled = true;
+  const btnConf = document.getElementById('btnConfirmar');
+  if (btnConf) btnConf.disabled = true;
 
   const datos = await cargarDatosDelDia(fecha);
   if (!datos.diaActivo) {
@@ -323,34 +339,41 @@ function seleccionarHorario(fecha, horario, boton) {
   reservaActual.horario = horario;
   document.querySelectorAll('.horario-btn').forEach(btn => btn.classList.remove('selected'));
   if (boton) boton.classList.add('selected');
-  document.getElementById('btnConfirmar').disabled = false;
+  const btnConf = document.getElementById('btnConfirmar');
+  if (btnConf) btnConf.disabled = false;
 }
 
 function mostrarPaso(numero) {
   document.querySelectorAll('.paso-container').forEach(paso => paso.classList.add('ocultar'));
-  document.getElementById(`paso${numero}`).classList.remove('ocultar');
+  document.getElementById(`paso${numero}`)?.classList.remove('ocultar');
   if (numero === 2) mostrarServicios(reservaActual.profesional.id);
   if (numero === 4) mostrarResumenPaso4();
 }
 
 function mostrarResumenPaso4() {
   if (usuarioActual) {
-    document.getElementById('resumenNombre').textContent = `${usuarioActual.nombre} ${usuarioActual.apellido}`;
-    document.getElementById('resumenTelefono').textContent = usuarioActual.telefono;
+    const elemNom = document.getElementById('resumenNombre');
+    const elemTel = document.getElementById('resumenTelefono');
+    if (elemNom) elemNom.textContent = `${usuarioActual.nombre || ''} ${usuarioActual.apellido || ''}`;
+    if (elemTel) elemTel.textContent = usuarioActual.telefono || '';
   }
   const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   const fechaFormato = new Date(reservaActual.fecha + 'T00:00:00').toLocaleDateString('es-ES', opciones);
 
-  document.getElementById('resumenPaso4Profesional').textContent = reservaActual.profesional.nombre;
-  document.getElementById('resumenPaso4Servicio').textContent = reservaActual.servicio.nombre;
-  document.getElementById('resumenPaso4Fecha').textContent = fechaFormato;
-  document.getElementById('resumenPaso4Horario').textContent = reservaActual.horario;
+  const pProf = document.getElementById('resumenPaso4Profesional');
+  const pServ = document.getElementById('resumenPaso4Servicio');
+  const pFec = document.getElementById('resumenPaso4Fecha');
+  const pHor = document.getElementById('resumenPaso4Horario');
+
+  if (pProf) pProf.textContent = reservaActual.profesional.nombre;
+  if (pServ) pServ.textContent = reservaActual.servicio.nombre;
+  if (pFec) pFec.textContent = fechaFormato;
+  if (pHor) pHor.textContent = reservaActual.horario;
 }
 
 async function confirmarReserva() {
   const btn = document.getElementById('btnFinalizar');
-  btn.disabled = true;
-  btn.textContent = 'Guardando...';
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
 
   const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
   const fechaFormato = new Date(reservaActual.fecha + 'T00:00:00').toLocaleDateString('es-ES', opciones);
@@ -361,9 +384,9 @@ async function confirmarReserva() {
     fecha: reservaActual.fecha,
     fechaFormato,
     horario: reservaActual.horario,
-    clienteNombre: `${usuarioActual.nombre} ${usuarioActual.apellido}`,
-    clienteTelefono: usuarioActual.telefono,
-    clienteEmail: usuarioActual.email,
+    clienteNombre: `${usuarioActual.nombre || ''} ${usuarioActual.apellido || ''}`.trim(),
+    clienteTelefono: usuarioActual.telefono || '',
+    clienteEmail: usuarioActual.email || '',
     usuarioId: usuarioActual.uid,
     creadoEn: new Date().toISOString()
   };
@@ -371,12 +394,16 @@ async function confirmarReserva() {
   try {
     const docRef = await addDoc(collection(db, "turnos"), nuevoTurno);
 
-    document.getElementById('resumenProfesional').textContent = reservaActual.profesional.nombre;
-    document.getElementById('resumenServicio').textContent = reservaActual.servicio.nombre;
-    document.getElementById('resumenFecha').textContent = fechaFormato;
-    document.getElementById('resumenHorario').textContent = reservaActual.horario;
+    const rProf = document.getElementById('resumenProfesional');
+    const rServ = document.getElementById('resumenServicio');
+    const rFec = document.getElementById('resumenFecha');
+    const rHor = document.getElementById('resumenHorario');
 
-    // Ejecutar notificaciones y confirmación
+    if (rProf) rProf.textContent = reservaActual.profesional.nombre;
+    if (rServ) rServ.textContent = reservaActual.servicio.nombre;
+    if (rFec) rFec.textContent = fechaFormato;
+    if (rHor) rHor.textContent = reservaActual.horario;
+
     try {
       await crearNotificacion({
         para: 'admin',
@@ -391,13 +418,8 @@ async function confirmarReserva() {
         turnoId: docRef.id
       });
 
-      // Notificación push móvil
       await mostrarNotifPush('¡Turno Confirmado!', `${nuevoTurno.profesional} - ${nuevoTurno.fechaFormato} a las ${nuevoTurno.horario}`);
-
-      // Email de confirmación al cliente
       await enviarEmailConfirmacion(nuevoTurno);
-
-      // Programar recordatorios (24h y 30m antes)
       await programarRecordatorios({ ...nuevoTurno, id: docRef.id });
 
     } catch(notifError) {
@@ -408,17 +430,19 @@ async function confirmarReserva() {
   } catch (error) {
     alert('Error al guardar el turno. Intentá de nuevo.');
     console.error(error);
-    btn.disabled = false;
-    btn.textContent = 'Confirmar Reserva';
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar Reserva'; }
   }
 }
 
 function nuevaReserva() {
   reservaActual = { profesional: null, servicio: null, fecha: null, horario: null };
   cacheDia = {};
-  document.getElementById('dia').value = '';
-  document.getElementById('horariosDisponibles').innerHTML = '';
-  document.getElementById('btnConfirmar').disabled = true;
+  const elemDia = document.getElementById('dia');
+  const elemHor = document.getElementById('horariosDisponibles');
+  const btnConf = document.getElementById('btnConfirmar');
+  if (elemDia) elemDia.value = '';
+  if (elemHor) elemHor.innerHTML = '';
+  if (btnConf) btnConf.disabled = true;
 
   const btnFinalizar = document.getElementById('btnFinalizar');
   if (btnFinalizar) {
@@ -429,21 +453,10 @@ function nuevaReserva() {
 }
 
 function configurarEventosGenerales() {
-  const volver1 = document.getElementById('btnVolver1');
-  if (volver1) volver1.addEventListener('click', () => mostrarPaso(1));
-
-  const volver2 = document.getElementById('btnVolver2');
-  if (volver2) volver2.addEventListener('click', () => mostrarPaso(2));
-
-  const btnConfirmar = document.getElementById('btnConfirmar');
-  if (btnConfirmar) btnConfirmar.addEventListener('click', () => mostrarPaso(4));
-
-  const volver3 = document.getElementById('btnVolver3');
-  if (volver3) volver3.addEventListener('click', () => mostrarPaso(3));
-
-  const btnFinalizar = document.getElementById('btnFinalizar');
-  if (btnFinalizar) btnFinalizar.addEventListener('click', confirmarReserva);
-
-  const nueva = document.getElementById('btnNuevaReserva');
-  if (nueva) nueva.addEventListener('click', nuevaReserva);
+  document.getElementById('btnVolver1')?.addEventListener('click', () => mostrarPaso(1));
+  document.getElementById('btnVolver2')?.addEventListener('click', () => mostrarPaso(2));
+  document.getElementById('btnConfirmar')?.addEventListener('click', () => mostrarPaso(4));
+  document.getElementById('btnVolver3')?.addEventListener('click', () => mostrarPaso(3));
+  document.getElementById('btnFinalizar')?.addEventListener('click', confirmarReserva);
+  document.getElementById('btnNuevaReserva')?.addEventListener('click', nuevaReserva);
 }
