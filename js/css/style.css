@@ -1,0 +1,745 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body { font-family: Arial, sans-serif; background-color: #f5f5f5; }
+
+/* ===================== HEADER / NAV ===================== */
+header { background-color: #333; padding: 15px 0; position: relative; }
+
+nav {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.logo { max-width: 150px; height: auto; display: flex; align-items: center; text-decoration: none; }
+.logo img { max-width: 100%; height: 50px; object-fit: contain; }
+
+.navbar { display: flex; list-style: none; gap: 20px; align-items: center; }
+
+.nav-item { color: white; text-decoration: none; font-size: 14px; }
+.nav-item:hover { color: #ddd; }
+
+/* Hamburguesa */
+.hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+    padding: 5px;
+    background: none;
+    border: none;
+    z-index: 1001;
+}
+.hamburger span {
+    display: block;
+    width: 25px;
+    height: 3px;
+    background: white;
+    border-radius: 3px;
+    transition: all 0.3s;
+}
+.hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(5px, 6px); }
+.hamburger.open span:nth-child(2) { opacity: 0; }
+.hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -6px); }
+
+@media (max-width: 768px) {
+    .hamburger { display: flex; }
+
+    .navbar {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #333;
+        flex-direction: column;
+        gap: 0;
+        padding: 10px 0;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .navbar.open { display: flex; }
+
+    .navbar li { width: 100%; }
+    .navbar .nav-item {
+        display: block;
+        padding: 12px 20px;
+        font-size: 16px;
+        border-bottom: 1px solid #444;
+    }
+    .navbar li:last-child .nav-item { border-bottom: none; }
+    .navbar .btn { margin: 10px 20px; width: calc(100% - 40px); }
+}
+
+/* ===================== MAIN ===================== */
+main { background-color: #2a2a2a; padding: 30px 15px; min-height: calc(100vh - 81px); }
+.container { max-width: 1200px; margin: 0 auto; }
+
+h1 { text-align: center; color: white; margin-bottom: 30px; font-size: 28px; }
+h2 { color: #333; font-size: 20px; margin-bottom: 15px; }
+h5 { font-size: 15px; font-weight: bold; margin-bottom: 12px; }
+
+/* ===================== CARDS ===================== */
+.card {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+.card-body { padding: 0; }
+.card-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; }
+.card-text { font-size: 14px; margin-bottom: 10px; color: #666; }
+.light-text { color: #999; }
+.text-center { text-align: center; }
+.text-success { color: #28a745; }
+.alert { padding: 15px; border-radius: 5px; margin-bottom: 15px; }
+.alert-success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+.card-success { border: 2px solid #28a745; }
+
+/* ===================== FORMS ===================== */
+.form-label { display: block; margin-bottom: 6px; font-weight: bold; color: #333; font-size: 14px; }
+.form-group { margin-bottom: 15px; }
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+}
+.form-control:focus { outline: none; border-color: #007bff; box-shadow: 0 0 5px rgba(0,123,255,0.4); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.form-error { color: #dc3545; font-size: 13px; margin-top: 8px; min-height: 18px; }
+.form-success { color: #28a745; font-size: 13px; margin-top: 8px; }
+textarea.form-control { resize: vertical; min-height: 80px; }
+
+/* Fecha y tiempo — clickeable completo y sin overflow */
+input[type="date"].form-control,
+input[type="time"].form-control {
+    position: relative;
+    cursor: pointer;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    appearance: none;
+}
+input[type="date"].form-control::-webkit-calendar-picker-indicator,
+input[type="time"].form-control::-webkit-calendar-picker-indicator {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* ===================== BUTTONS ===================== */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: all 0.2s;
+    display: inline-block;
+    text-align: center;
+}
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+.btn-primary { background-color: #007bff; color: white; }
+.btn-primary:hover { background-color: #0056b3; }
+.btn-success { background-color: #28a745; color: white; }
+.btn-success:hover { background-color: #218838; }
+.btn-success:disabled { background-color: #ccc; cursor: not-allowed; }
+.btn-secondary { background-color: #6c757d; color: white; }
+.btn-secondary:hover { background-color: #545b62; }
+.btn-danger { background-color: #dc3545; color: white; }
+.btn-danger:hover { background-color: #b02a37; }
+.btn-link-block { display: inline-block; margin-top: 15px; }
+.buttons-group { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ===================== PASO CONTAINER ===================== */
+.paso-container { animation: fadeIn 0.3s ease-in; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.ocultar { display: none !important; }
+
+/* ===================== PROFESIONALES ===================== */
+.profesionales-container { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 15px; }
+.profesional-item { flex: 1 1 calc(33.333% - 15px); min-width: 200px; }
+.profesional-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+    text-align: center;
+}
+.profesional-card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
+
+/* ===================== SERVICIOS ===================== */
+.servicios-container { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 15px; }
+.servicio-item { flex: 1 1 calc(50% - 15px); min-width: 200px; }
+.servicio-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+}
+.servicio-card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
+.servicio-nombre { margin-bottom: 8px; color: #333; font-weight: bold; }
+.servicio-precio { color: #666; margin-bottom: 6px; }
+.servicio-duracion { color: #999; margin-bottom: 6px; }
+
+/* ===================== HORARIOS ===================== */
+.horarios-container { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+.horario-item { flex: 1 1 calc(25% - 10px); min-width: 70px; }
+.horario-btn {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #007bff;
+    background-color: white;
+    color: #007bff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+    font-size: 13px;
+}
+.horario-btn:hover { background-color: #007bff; color: white; }
+.horario-btn.selected { background-color: #007bff; color: white; }
+.form-section { margin-top: 15px; width: 100%; overflow: hidden; }
+.form-section input { max-width: 100%; }
+
+/* ===================== TURNOS CLIENTE ===================== */
+.turno-card {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+.turno-info { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-width: 200px; }
+.turno-label { font-weight: bold; color: #333; font-size: 13px; }
+.turno-value { color: #666; font-size: 15px; }
+.turno-actions { display: flex; gap: 10px; flex-shrink: 0; }
+.badge-pasado { background: #aaa; color: white; padding: 6px 14px; border-radius: 4px; font-size: 13px; }
+
+/* ===================== PROFESIONALES GALERÍA ===================== */
+.profesionales-galeria { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-top: 25px; }
+.profesional-tarjeta { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.3s, box-shadow 0.3s; }
+.profesional-tarjeta:hover { transform: translateY(-8px); box-shadow: 0 8px 20px rgba(0,0,0,0.25); }
+.profesional-imagen { width: 100%; height: 220px; object-fit: cover; background-color: #e0e0e0; }
+.profesional-contenido { padding: 20px; }
+.profesional-nombre { font-size: 20px; font-weight: bold; color: #333; margin-bottom: 10px; }
+.profesional-descripcion { font-size: 14px; color: #666; margin-bottom: 10px; line-height: 1.5; }
+.profesional-seccion { margin-bottom: 12px; }
+.profesional-seccion-titulo { font-size: 11px; font-weight: bold; color: #007bff; text-transform: uppercase; margin-bottom: 4px; }
+.profesional-especializacion { font-size: 14px; color: #555; }
+.profesional-horarios { font-size: 14px; color: #555; display: grid; gap: 5px; }
+.horario-item-prof { padding: 5px 10px; background-color: #f0f0f0; border-radius: 4px; border-left: 3px solid #007bff; }
+
+/* ===================== CONTACTO ===================== */
+.contacto-seccion { display: flex; flex-direction: column; align-items: center; gap: 30px; }
+.contacto-titulo { text-align: center; font-size: 26px; font-weight: bold; color: white; margin-bottom: 15px; }
+.contacto-subtitulo { text-align: center; font-size: 15px; color: #ccc; max-width: 600px; }
+.contacto-iconos { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; width: 100%; max-width: 800px; }
+.contacto-item { border-radius: 12px; padding: 30px 20px; text-align: center; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15); text-decoration: none; color: inherit; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.contacto-item:hover { transform: translateY(-10px); box-shadow: 0 10px 25px rgba(0,0,0,0.25); }
+.contacto-icono { max-width: 55px; }
+.contacto-nombre { font-size: 18px; font-weight: bold; color: #333; }
+.contacto-link { font-size: 12px; color: #666; word-break: break-all; }
+.contacto-item.instagram { background-color: #afafaf; border-top: 4px solid #667eea; }
+.contacto-item.instagram:hover { background: linear-gradient(135deg, #667eea, #764ba2); }
+.contacto-item.instagram:hover .contacto-nombre,
+.contacto-item.instagram:hover .contacto-link { color: white; }
+.contacto-item.whatsapp { background-color: #afafaf; border-top: 4px solid #25D366; }
+.contacto-item.whatsapp:hover { background: linear-gradient(135deg, #25D366, #33503e); }
+.contacto-item.whatsapp:hover .contacto-nombre,
+.contacto-item.whatsapp:hover .contacto-link { color: white; }
+.contacto-item.email { background-color: #afafaf; border-top: 4px solid #EA4335; }
+.contacto-item.email:hover { background: linear-gradient(135deg, #EA4335, #5a3330); }
+.contacto-item.email:hover .contacto-nombre,
+.contacto-item.email:hover .contacto-link { color: white; }
+
+/* ===================== AUTH ===================== */
+.tabs-container { display: flex; margin-bottom: 25px; border-bottom: 2px solid #eee; }
+.tab-btn { flex: 1; padding: 12px; border: none; background: none; cursor: pointer; font-size: 15px; font-weight: bold; color: #999; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+.tab-btn.tab-active { color: #007bff; border-bottom-color: #007bff; }
+
+/* ===================== PERFIL ===================== */
+.datos-usuario-box { background: #f8f9fa; border: 1px solid #ddd; border-radius: 6px; padding: 15px; margin-top: 8px; }
+.datos-usuario-box p { margin-bottom: 5px; color: #555; }
+
+/* ===================== ADMIN — STATS ===================== */
+.stats-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.stat-card { background: white; border-radius: 8px; padding: 15px 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.stat-numero { font-size: 36px; font-weight: bold; color: #007bff; }
+.stat-label { font-size: 12px; color: #666; margin-top: 4px; }
+
+/* ===================== ADMIN — TABS ===================== */
+.seccion-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.seccion-tabs .btn { flex: 1 1 auto; min-width: 100px; font-size: 13px; padding: 8px 12px; }
+
+/* ===================== ADMIN — FILTROS ===================== */
+.filtros-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; }
+.filtros-container > div { min-width: 0; overflow: hidden; }
+
+/* ===================== ADMIN — TURNOS ===================== */
+.grupo-fecha { margin-bottom: 20px; }
+.grupo-fecha-titulo { color: white; font-weight: bold; font-size: 15px; margin-bottom: 8px; padding: 8px 15px; background: #007bff; border-radius: 6px; text-transform: capitalize; }
+.admin-turno-card { margin-top: 10px; }
+.turno-pasado { opacity: 0.6; border-left: 4px solid #999; }
+.turno-horario-badge { background: #007bff; color: white; padding: 3px 10px; border-radius: 20px; font-size: 13px; font-weight: bold; }
+
+/* ===================== ADMIN — CALENDARIO ===================== */
+.cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.calendario-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.cal-header-cell { text-align: center; font-weight: bold; font-size: 12px; color: #666; padding: 6px 2px; border-bottom: 2px solid #eee; }
+.cal-cell { min-height: 80px; border: 1px solid #eee; border-radius: 5px; padding: 5px; background: white; transition: background 0.2s; }
+.cal-cell.cal-empty { background: #f9f9f9; border-color: #f0f0f0; }
+.cal-cell.cal-hoy { border: 2px solid #007bff; background: #f0f7ff; }
+.cal-cell.cal-con-turnos:hover { background: #e8f4ff; }
+.cal-dia-num { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 3px; }
+.cal-hoy .cal-dia-num { color: #007bff; }
+.cal-badge { display: inline-block; background: #007bff; color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-bottom: 3px; }
+.cal-mini-lista { display: flex; flex-direction: column; gap: 2px; }
+.cal-mini-item { font-size: 10px; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #f0f0f0; border-radius: 3px; padding: 1px 4px; }
+.cal-mas { color: #007bff; font-weight: bold; background: #e8f4ff; }
+
+/* ===================== MODAL ===================== */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 15px; }
+.modal-content { background: #2a2a2a; border-radius: 12px; width: 100%; max-width: 700px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+.modal-sm { max-width: 460px; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; border-bottom: 1px solid #444; }
+.modal-header .card-title { color: white; text-transform: capitalize; }
+.modal-body { overflow-y: auto; padding: 20px 22px; }
+
+/* ===================== ADMIN — USUARIOS ===================== */
+.usuario-card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 18px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; }
+.usuario-card.usuario-bloqueado { border-left: 4px solid #dc3545; background: #fff8f8; opacity: 0.85; }
+.usuario-nombre { font-size: 17px; font-weight: bold; color: #333; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.usuario-datos { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: #666; }
+.usuario-actions { flex-shrink: 0; }
+.badge-bloqueado { background: #dc3545; color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
+
+/* ===================== EDITOR CARDS ===================== */
+.editor-card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 14px 18px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.07); flex-wrap: wrap; }
+.editor-card-info { flex: 1; min-width: 150px; }
+.editor-card-nombre { font-size: 15px; font-weight: bold; color: #333; margin-bottom: 3px; }
+.editor-card-detalle { font-size: 13px; color: #777; }
+.editor-card-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* ===================== HORARIOS EDITOR ===================== */
+.horario-dia-section { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 15px 18px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.07); }
+.horario-dia-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.horario-dia-titulo { font-size: 16px; font-weight: bold; color: #333; }
+.horario-rango { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 12px; width: 100%; }
+.horario-rango > div { min-width: 0; overflow: hidden; }
+.dia-config { margin-top: 10px; }
+.preview-slots { margin-bottom: 12px; padding: 10px; background: #f8f9fa; border-radius: 6px; }
+.preview-titulo { font-size: 11px; color: #666; margin-bottom: 6px; font-weight: bold; text-transform: uppercase; }
+.preview-lista { display: flex; flex-wrap: wrap; gap: 5px; }
+.preview-slot { background: #007bff; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+.horario-save-btn { margin-top: 4px; }
+
+/* Intervalos info */
+.intervalos-info { display: flex; flex-direction: column; gap: 10px; }
+.intervalo-badge { font-size: 14px; color: #333; }
+.servicios-duraciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.servicio-duracion-tag { background: #e8f4ff; border: 1px solid #007bff; color: #007bff; padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: bold; }
+
+/* Toggle switch */
+.toggle-switch { position: relative; display: inline-block; width: 46px; height: 24px; cursor: pointer; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; inset: 0; background: #ccc; border-radius: 24px; transition: 0.3s; }
+.toggle-slider:before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+.toggle-switch input:checked + .toggle-slider { background: #007bff; }
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(22px); }
+
+/* ===================== RESPONSIVE ===================== */
+@media (max-width: 768px) {
+    h1 { font-size: 22px; margin-bottom: 20px; }
+    .card { padding: 15px; }
+    .stats-container { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat-numero { font-size: 26px; }
+    .filtros-container { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    .turno-info { grid-template-columns: 1fr; gap: 8px; }
+    .turno-card { flex-direction: column; align-items: flex-start; }
+    .profesional-item { flex: 1 1 100%; }
+    .servicio-item { flex: 1 1 100%; }
+    .horario-item { flex: 1 1 calc(33% - 10px); }
+    .calendario-grid { gap: 2px; }
+    .cal-cell { min-height: 55px; padding: 3px; }
+    .cal-mini-lista { display: none; }
+    .cal-header-cell { font-size: 10px; padding: 4px 1px; }
+    .horario-rango { grid-template-columns: 1fr; }
+    .seccion-tabs .btn { font-size: 12px; padding: 7px 8px; min-width: 70px; }
+    .usuario-card { flex-direction: column; align-items: flex-start; }
+    .buttons-group { flex-direction: column; }
+    .buttons-group .btn { width: 100%; }
+    .modal-content { max-height: 95vh; }
+}
+
+@media (max-width: 480px) {
+    main { padding: 20px 10px; }
+    .stats-container { grid-template-columns: repeat(2, 1fr); }
+    .horario-item { flex: 1 1 calc(50% - 10px); }
+    .cal-badge { font-size: 9px; padding: 1px 4px; }
+}
+
+/* Admin nav link */
+.nav-item-admin {
+    color: #aaa !important;
+    font-size: 12px !important;
+    border: 1px solid #555;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+.nav-item-admin:hover { color: white !important; border-color: #aaa; }
+
+/* ===================== USUARIOS COLLAPSIBLE ===================== */
+.usuario-card-collapsible {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+.usuario-card-collapsible.usuario-bloqueado { border-left: 4px solid #dc3545; background: #fff8f8; }
+
+.usuario-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    gap: 12px;
+    cursor: default;
+}
+.usuario-header-info { flex: 1; }
+.usuario-resumen { display: flex; gap: 15px; margin-top: 4px; font-size: 13px; color: #777; }
+
+.usuario-detalle {
+    border-top: 1px solid #eee;
+    padding: 15px 18px;
+    background: #fafafa;
+}
+.usuario-detalle-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-bottom: 15px; }
+.usuario-dato-item { font-size: 14px; color: #555; }
+.usuario-turnos-titulo { font-weight: bold; font-size: 14px; color: #333; margin-bottom: 8px; }
+.usuario-turnos-lista { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
+.usuario-turno-item {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 12px;
+    background: white;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    font-size: 13px;
+}
+.usuario-detalle-actions { display: flex; gap: 10px; }
+.badge-pasado-sm { background: #aaa; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+.badge-proximo-sm { background: #28a745; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+
+/* Turno admin modal */
+.turno-admin-modal .form-control { margin-bottom: 0; }
+
+/* ===================== NOTIFICACIONES ===================== */
+.notif-campana {
+    position: relative;
+    margin-left: 10px;
+}
+
+.notif-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.notif-icon {
+    font-size: 22px;
+    filter: brightness(0) invert(1);
+}
+
+.notif-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #dc3545;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    min-width: 17px;
+    height: 17px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+.notif-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 320px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    z-index: 2000;
+    overflow: hidden;
+}
+
+.notif-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
+    font-weight: bold;
+    font-size: 14px;
+    color: #333;
+}
+
+.notif-marcar-todas {
+    background: none;
+    border: none;
+    color: #007bff;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.notif-lista {
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.notif-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.notif-item:hover { background: #f8f9fa; }
+.notif-item.no-leida { background: #f0f7ff; border-left: 3px solid #007bff; }
+.notif-item.leida { opacity: 0.7; }
+
+.notif-mensaje { font-size: 13px; color: #333; margin-bottom: 4px; }
+.notif-fecha { font-size: 11px; color: #999; }
+.notif-vacia { text-align: center; padding: 20px; color: #999; font-size: 13px; }
+
+@media (max-width: 768px) {
+    .notif-panel {
+        width: 290px;
+        right: -10px;
+    }
+}
+
+/* ===================== CALENDARIO MULTI-VISTA ===================== */
+.cal-controles {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.cal-vistas { display: flex; gap: 5px; }
+.cal-label { font-size: 16px; font-weight: bold; color: #333; min-width: 150px; text-align: center; }
+
+/* Vista Dia */
+.cal-dia-wrapper { display: flex; flex-direction: column; gap: 10px; }
+
+.cal-turno-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    border-radius: 8px;
+    border-left: 4px solid #007bff;
+    background: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    flex-wrap: wrap;
+}
+.cal-turno-pasado { border-left-color: #aaa; opacity: 0.7; }
+.cal-turno-proximo { border-left-color: #28a745; }
+.cal-turno-hora { font-size: 16px; font-weight: bold; color: #007bff; min-width: 55px; }
+.cal-turno-info { flex: 1; min-width: 120px; }
+.cal-turno-cliente { font-weight: bold; color: #333; font-size: 15px; }
+.cal-turno-detalle { font-size: 13px; color: #777; margin-top: 2px; }
+.cal-turno-actions { display: flex; gap: 6px; }
+.cal-btn-editar { padding: 5px 12px; border: none; border-radius: 4px; background: #007bff; color: white; cursor: pointer; font-size: 12px; font-weight: bold; }
+.cal-btn-eliminar { padding: 5px 10px; border: none; border-radius: 4px; background: #6c757d; color: white; cursor: pointer; font-size: 12px; font-weight: bold; }
+
+/* Vista Semana */
+.cal-semana-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    min-height: 400px;
+}
+
+.cal-semana-col {
+    background: white;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.cal-semana-hoy { border-color: #007bff; background: #f0f7ff; }
+
+.cal-semana-header {
+    padding: 8px 5px;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+    background: #f8f9fa;
+}
+
+.cal-semana-dia { font-size: 11px; color: #666; font-weight: bold; text-transform: uppercase; }
+.cal-semana-num { font-size: 18px; font-weight: bold; color: #333; margin-top: 2px; }
+.cal-num-hoy { color: white; background: #007bff; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; margin: 2px auto 0; font-size: 14px; }
+
+.cal-semana-body { padding: 5px; display: flex; flex-direction: column; gap: 4px; }
+.cal-semana-vacio { text-align: center; color: #ccc; font-size: 12px; padding: 10px 0; }
+
+.cal-semana-turno {
+    padding: 4px 6px;
+    background: #e8f4ff;
+    border-left: 3px solid #007bff;
+    border-radius: 3px;
+    font-size: 11px;
+    color: #333;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.cal-semana-turno:hover { background: #007bff; color: white; }
+.cal-semana-hora { font-weight: bold; }
+
+@media (max-width: 768px) {
+    .cal-semana-grid { grid-template-columns: repeat(7, 1fr); gap: 2px; }
+    .cal-semana-num { font-size: 14px; }
+    .cal-semana-turno { font-size: 9px; padding: 2px 3px; }
+    .cal-controles { flex-direction: column; align-items: flex-start; }
+    .cal-label { min-width: auto; }
+    .cal-turno-item { flex-direction: column; align-items: flex-start; }
+}
+
+/* ===================== WHATSAPP CHECKBOX ===================== */
+.check-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #333;
+}
+.check-label input[type="checkbox"] {
+    margin-top: 2px;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.wpp-activar-box {
+    margin-top: 12px;
+    padding: 12px 15px;
+    background: #f0fff4;
+    border: 1px solid #25D366;
+    border-radius: 8px;
+}
+.wpp-instruccion {
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 10px;
+}
+.btn-wpp {
+    display: inline-block;
+    background: #25D366;
+    color: white;
+    padding: 8px 18px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px;
+}
+.btn-wpp:hover { background: #1da851; color: white; }
+
+/* ===================== WHATSAPP CHECK ===================== */
+.check-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #333;
+}
+
+.check-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: #25D366;
+}
+
+.wpp-instruccion {
+    font-size: 13px;
+    color: #555;
+    background: #f0faf3;
+    border: 1px solid #25D366;
+    border-radius: 6px;
+    padding: 10px 12px;
+    line-height: 1.5;
+}
+
+.btn-wpp {
+    background: #25D366;
+    color: white !important;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-weight: bold;
+    font-size: 14px;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.btn-wpp:hover { background: #1da851; }
+
+.wpp-nota {
+    font-size: 12px;
+    color: #888;
+    margin-top: 8px;
+    font-style: italic;
+}

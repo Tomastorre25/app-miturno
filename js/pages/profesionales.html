@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profesionales - Mi Turno</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script type="module" src="../js/profesionales-page.js"></script>
+</head>
+<body>
+    <header>
+        <nav>
+            <a class="logo" href="../index.html"><img src="../media/logo-blanco.png" alt="Mi Turno"></a>
+                                    <ul class="navbar">
+                <li><a class="nav-item" href="../index.html">Reservar</a></li>
+                <li><a class="nav-item" href="#">Profesionales</a></li>
+                <li><a class="nav-item" href="./contacto.html">Contacto</a></li>
+                <li><a class="nav-item" href="./turnos.html">Mis Turnos</a></li>
+                <li><a class="nav-item nav-item-admin" href="./admin.html">Admin</a></li>
+            </ul>
+            <button class="hamburger" id="menuHamburger" aria-label="Menú">
+                <span></span><span></span><span></span>
+            </button>
+        </nav>
+    </header>
+    <main>
+        <div class="container">
+            <h1>Nuestros Profesionales</h1>
+            <div class="profesionales-galeria" id="profesionalesGaleria"></div>
+        </div>
+    </main>
+    <script>
+        const hamburger = document.getElementById('menuHamburger');
+        const navbar = document.querySelector('.navbar');
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('open');
+            navbar.classList.toggle('open');
+        });
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                hamburger.classList.remove('open');
+                navbar.classList.remove('open');
+            });
+        });
+    </script>
+</body>
+</html>
