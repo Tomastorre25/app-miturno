@@ -1,5 +1,7 @@
 import { db } from './firebase-config.js';
-import { collection, addDoc, onSnapshot, query, where, orderBy, updateDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { 
+  collection, addDoc, onSnapshot, query, where, orderBy, updateDoc, deleteDoc, doc, getDocs 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ===================== EMAILJS CONFIG =====================
 const EMAILJS_SERVICE_ID = 'service_fqi01vb';
@@ -53,6 +55,11 @@ export async function enviarEmailConfirmacion(turno) {
   await enviarEmail({
     to_email: emailDestino,
     email: emailDestino,
+    cliente_email: emailDestino,
+    user_email: emailDestino,
+    destinatario: emailDestino,
+    recipient: emailDestino,
+    to: emailDestino,
     cliente_nombre: turno.clienteNombre || 'Cliente',
     profesional: turno.profesional,
     servicio: turno.servicio,
@@ -64,20 +71,49 @@ export async function enviarEmailConfirmacion(turno) {
   });
 }
 
-export async function enviarEmailCancelacion(turno) {
-  const emailDestino = turno.clienteEmail || turno.email;
-  if (!emailDestino) return;
-  await enviarEmail({
-    to_email: emailDestino,
-    email: emailDestino,
+export async function enviarEmailCancelacion(turno, canceladoPor = 'admin') {
+  const ADMIN_EMAIL = 'tomasdelatorre15@gmail.com';
+  const emailCliente = turno.clienteEmail || turno.email;
+
+  const baseParams = {
     cliente_nombre: turno.clienteNombre || 'Cliente',
-    profesional: turno.profesional,
-    servicio: turno.servicio,
+    profesional: turno.profesional || 'Profesional',
+    servicio: turno.servicio || 'Servicio',
     fecha: turno.fechaFormato || turno.fecha,
-    horario: turno.horario,
-    url_turnos: 'https://miturno-barberia.web.app/pages/turnos.html',
-    asunto: 'Turno cancelado - Mi Turno',
-    mensaje_extra: 'Tu turno ha sido cancelado. Podés volver a reservar desde la app.'
+    horario: turno.horario || '',
+    url_turnos: 'https://miturno-barberia.web.app/pages/turnos.html'
+  };
+
+  // 1. Enviar email al cliente (si tiene email registrado)
+  if (emailCliente) {
+    await enviarEmail({
+      ...baseParams,
+      to_email: emailCliente,
+      email: emailCliente,
+      cliente_email: emailCliente,
+      user_email: emailCliente,
+      destinatario: emailCliente,
+      recipient: emailCliente,
+      to: emailCliente,
+      asunto: 'Turno cancelado - Mi Turno',
+      mensaje_extra: canceladoPor === 'admin' 
+        ? 'Tu turno fue cancelado por la barbería. Podés ingresar a la app para seleccionar un nuevo horario.' 
+        : 'Confirmamos la cancelación de tu turno.'
+    });
+  }
+
+  // 2. Enviar email al Administrador
+  await enviarEmail({
+    ...baseParams,
+    to_email: ADMIN_EMAIL,
+    email: ADMIN_EMAIL,
+    cliente_email: ADMIN_EMAIL,
+    user_email: ADMIN_EMAIL,
+    destinatario: ADMIN_EMAIL,
+    recipient: ADMIN_EMAIL,
+    to: ADMIN_EMAIL,
+    asunto: `Aviso de cancelación: ${turno.clienteNombre || 'Cliente'}`,
+    mensaje_extra: `Se canceló el turno de ${turno.clienteNombre || 'Cliente'} del día ${turno.fechaFormato || turno.fecha} a las ${turno.horario} con ${turno.profesional} (${canceladoPor === 'admin' ? 'por el administrador' : 'por el cliente'}).`
   });
 }
 
@@ -87,6 +123,11 @@ export async function enviarEmailModificacion(turno) {
   await enviarEmail({
     to_email: emailDestino,
     email: emailDestino,
+    cliente_email: emailDestino,
+    user_email: emailDestino,
+    destinatario: emailDestino,
+    recipient: emailDestino,
+    to: emailDestino,
     cliente_nombre: turno.clienteNombre || 'Cliente',
     profesional: turno.profesional,
     servicio: turno.servicio,
@@ -108,6 +149,11 @@ export async function enviarEmailRecordatorio(turno, tipo) {
   await enviarEmail({
     to_email: emailDestino,
     email: emailDestino,
+    cliente_email: emailDestino,
+    user_email: emailDestino,
+    destinatario: emailDestino,
+    recipient: emailDestino,
+    to: emailDestino,
     cliente_nombre: turno.clienteNombre || 'Cliente',
     profesional: turno.profesional,
     servicio: turno.servicio,
@@ -215,24 +261,53 @@ export function escucharNotificaciones(uid, esAdmin, callback) {
     
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  }, (error) => {
+    console.error('Error escuchando notificaciones:', error);
   });
 }
 
 export async function marcarLeidaNotificacion(id) {
-  await updateDoc(doc(db, 'notificaciones', id), { leida: true });
+  try {
+    await updateDoc(doc(db, 'notificaciones', id), { leida: true });
+  } catch(e) {
+    console.error('Error al marcar leída:', e);
+  }
 }
 
 export async function marcarTodasLeidas(uid, esAdmin) {
-  const q = esAdmin 
-    ? query(collection(db, 'notificaciones'), where('para', '==', 'admin'), where('leida', '==', false))
-    : query(collection(db, 'notificaciones'), where('para', '==', uid), where('leida', '==', false));
-  const snap = await getDocs(q);
-  await Promise.all(snap.docs.map(d => updateDoc(doc(db, 'notificaciones', d.id), { leida: true })));
+  try {
+    const q = esAdmin 
+      ? query(collection(db, 'notificaciones'), where('para', '==', 'admin'), where('leida', '==', false))
+      : query(collection(db, 'notificaciones'), where('para', '==', uid), where('leida', '==', false));
+    const snap = await getDocs(q);
+    await Promise.all(snap.docs.map(d => updateDoc(doc(db, 'notificaciones', d.id), { leida: true })));
+  } catch(e) {
+    console.error('Error al marcar todas leídas:', e);
+  }
+}
+
+export async function eliminarNotificacion(id) {
+  try {
+    await deleteDoc(doc(db, 'notificaciones', id));
+  } catch(e) {
+    console.error('Error al eliminar notificación:', e);
+  }
+}
+
+export async function eliminarTodasNotificaciones(uid, esAdmin) {
+  try {
+    const q = esAdmin 
+      ? query(collection(db, 'notificaciones'), where('para', '==', 'admin'))
+      : query(collection(db, 'notificaciones'), where('para', '==', uid));
+    const snap = await getDocs(q);
+    await Promise.all(snap.docs.map(d => deleteDoc(doc(db, 'notificaciones', d.id))));
+  } catch(e) {
+    console.error('Error al borrar todas las notificaciones:', e);
+  }
 }
 
 // ===================== PUSH NOTIFICATIONS PARA MÓVILES =====================
 
-// Registrar Service Worker globalmente
 export async function registrarServiceWorker() {
   if ('serviceWorker' in navigator) {
     try {
@@ -252,7 +327,6 @@ export async function solicitarPermisoPush() {
     return false;
   }
   
-  // Asegurar registro del SW
   await registrarServiceWorker();
 
   if (Notification.permission === 'granted') return true;
@@ -287,7 +361,6 @@ export async function mostrarNotifPush(titulo, cuerpo) {
         return;
       }
     }
-    // Fallback estándar
     new Notification(titulo, {
       body: cuerpo,
       icon: '/media/logo-blanco.png'

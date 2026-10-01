@@ -28,7 +28,6 @@
   </header>
 
   <main>
-    <!-- PANEL DE ADMINISTRACIÓN -->
     <div id="panelSection" class="container">
       <div class="admin-header" style="display:flex; justify-content:space-between; align-items:center; margin:20px 0;">
         <h2>Panel de Administración</h2>
@@ -39,7 +38,7 @@
       <div class="stats-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:15px; margin-bottom:25px;">
         <div class="stat-card" style="background:#fff; padding:15px; border-radius:8px; text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
           <span style="font-size:24px; font-weight:bold; color:#2c3e50;" id="statTotal">0</span>
-          <p style="margin:5px 0 0; color:#7f8c8d; font-size:13px;">Turnos del Mes</p>
+          <p style="margin:5px 0 0; color:#7f8c8d; font-size:13px;">Turnos (Este Mes)</p>
         </div>
         <div class="stat-card" style="background:#fff; padding:15px; border-radius:8px; text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
           <span style="font-size:24px; font-weight:bold; color:#27ae60;" id="statProximos">0</span>
@@ -64,27 +63,26 @@
         <button class="btn btn-secondary" id="btnSeccionHorarios">Horarios</button>
       </div>
 
-      <!-- SECCIÓN: TURNOS -->
+      <!-- SECCIÓN 1: TURNOS -->
       <section id="seccionTurnos">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-            <button class="btn btn-primary" id="btnToggleNuevoTurno">+ Nuevo Turno</button>
+          <div style="display:flex; gap:10px; align-items:center;">
             <button class="btn btn-outline" id="btnVista">📅 Ver Calendario</button>
+            <button class="btn btn-primary" id="btnToggleFormReserva">+ Nuevo Turno</button>
           </div>
-          <div id="filtrosLista" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <div id="filtrosLista" style="display:flex; gap:10px; flex-wrap:wrap;">
             <select id="filtroProfesional" class="form-control" style="width:auto;">
               <option value="">Todos los profesionales</option>
             </select>
             <input type="date" id="filtroFecha" class="form-control" style="width:auto;">
-            <button class="btn btn-secondary btn-sm" id="btnLimpiarFiltros" style="display:none;">Limpiar filtros</button>
           </div>
         </div>
 
-        <!-- FORMULARIO OCULTO PARA NUEVO TURNO (SOLO EN SECCIÓN TURNOS, ACCESIBLE VÍA BOTÓN) -->
-        <div id="seccionNuevaReserva" class="ocultar" style="margin-bottom:20px; background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08); border:1px solid #e2e8f0;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
-            <h3 style="margin:0; color:#2c3e50;">Agregar Turno desde Admin</h3>
-            <button type="button" class="btn btn-secondary btn-sm" id="btnCerrarFormAdmin">✕ Cerrar</button>
+        <!-- Formulario oculto por defecto -->
+        <div id="seccionNuevaReserva" class="ocultar" style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0;">Agregar Turno desde Admin</h3>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnCerrarFormReserva">&times; Cerrar</button>
           </div>
           <form id="formAdminReserva">
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:15px;">
@@ -93,7 +91,7 @@
                 <input type="text" id="adminClienteNombre" class="form-control" placeholder="Buscar o escribir nombre" required autocomplete="off">
               </div>
               <div class="form-group">
-                <label class="form-label">Apellido</label>
+                <label class="form-label">Apellido *</label>
                 <input type="text" id="adminClienteApellido" class="form-control" placeholder="Apellido">
               </div>
               <div class="form-group">
@@ -129,27 +127,25 @@
               </div>
             </div>
 
-            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+            <div style="margin-top:20px; display:flex; gap:10px;">
+              <button type="submit" class="btn btn-primary">Guardar Reserva</button>
               <button type="button" class="btn btn-secondary" id="btnCancelarFormReserva">Cancelar</button>
-              <button type="submit" class="btn btn-primary" id="btnGuardarReservaAdmin">Guardar Reserva</button>
             </div>
           </form>
         </div>
 
         <p id="loadingMsg" class="ocultar" style="text-align:center; color:#666;">Cargando turnos...</p>
 
-        <!-- VISTA LISTA DE TURNOS -->
         <div id="vistaLista">
           <div id="turnosListaContainer"></div>
         </div>
 
-        <!-- VISTA CALENDARIO DE TURNOS -->
         <div id="vistaCalendario" class="ocultar">
           <div id="calendarioContainer"></div>
         </div>
       </section>
 
-      <!-- SECCIÓN: USUARIOS -->
+      <!-- SECCIÓN 2: USUARIOS -->
       <section id="seccionUsuarios" class="ocultar">
         <div style="margin-bottom:15px;">
           <input type="text" id="filtroUsuario" class="form-control" placeholder="Buscar por nombre, email o teléfono...">
@@ -157,27 +153,76 @@
         <div id="usuariosContainer"></div>
       </section>
 
-      <!-- SECCIÓN: PROFESIONALES -->
+      <!-- SECCIÓN 3: PROFESIONALES -->
       <section id="seccionProfesionales" class="ocultar">
-        <div style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+        <div style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:20px;">
           <h3>Gestión de Profesionales</h3>
-          <div id="profesionalesAdminContainer" style="margin-top:15px;"></div>
+          <form id="formAgregarProfesional" style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap; align-items:flex-end;">
+            <div class="form-group" style="flex:1; min-width:200px; margin:0;">
+              <label class="form-label">Nombre del Profesional</label>
+              <input type="text" id="profNombreInput" class="form-control" placeholder="Ej: Juan Pérez" required>
+            </div>
+            <div class="form-group" style="width:100px; margin:0;">
+              <label class="form-label">Orden</label>
+              <input type="number" id="profOrdenInput" class="form-control" value="1" min="1">
+            </div>
+            <button type="submit" class="btn btn-primary">+ Agregar Profesional</button>
+          </form>
         </div>
+        <div id="profesionalesAdminContainer"></div>
       </section>
 
-      <!-- SECCIÓN: SERVICIOS -->
+      <!-- SECCIÓN 4: SERVICIOS -->
       <section id="seccionServicios" class="ocultar">
-        <div style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-          <h3>Gestión de Servicios</h3>
-          <div id="serviciosAdminContainer" style="margin-top:15px;"></div>
+        <div style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:20px;">
+          <h3>Gestión de Servicios por Profesional</h3>
+          <div style="margin-top:15px;">
+            <label class="form-label">Seleccionar Profesional:</label>
+            <select id="servProfSelect" class="form-control" style="max-width:300px;">
+              <option value="">Seleccionar profesional...</option>
+            </select>
+          </div>
+
+          <form id="formAgregarServicio" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:15px; margin-top:20px;">
+            <div class="form-group">
+              <label class="form-label">Nombre del Servicio *</label>
+              <input type="text" id="servNombreInput" class="form-control" placeholder="Ej: Corte + Barba" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Precio ($) *</label>
+              <input type="number" id="servPrecioInput" class="form-control" placeholder="15000" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Duración *</label>
+              <input type="text" id="servDuracionInput" class="form-control" placeholder="30 min" value="30 min" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Orden</label>
+              <input type="number" id="servOrdenInput" class="form-control" value="1" min="1">
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <button type="submit" class="btn btn-primary">+ Agregar Servicio</button>
+            </div>
+          </form>
         </div>
+        <div id="serviciosAdminContainer"></div>
       </section>
 
-      <!-- SECCIÓN: HORARIOS -->
+      <!-- SECCIÓN 5: HORARIOS -->
       <section id="seccionHorarios" class="ocultar">
-        <div style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-          <h3>Configuración de Horarios</h3>
-          <div id="horariosAdminContainer" style="margin-top:15px;"></div>
+        <div style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:20px;">
+          <h3>Configuración de Horarios de Atención</h3>
+          <div style="margin-top:15px; margin-bottom:20px;">
+            <label class="form-label">Seleccionar Profesional:</label>
+            <select id="horariosProfSelect" class="form-control" style="max-width:300px;">
+              <option value="">Seleccionar profesional...</option>
+            </select>
+          </div>
+
+          <form id="formConfigHorarios">
+            <div id="horariosDiasContainer" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:15px;"></div>
+            <button type="submit" class="btn btn-primary" style="margin-top:20px;">Guardar Horarios</button>
+          </form>
         </div>
       </section>
 

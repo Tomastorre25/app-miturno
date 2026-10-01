@@ -1,23 +1,29 @@
 import { db, auth } from './firebase-config.js';
 import { 
-  collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc, orderBy, onSnapshot 
+  collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc, orderBy, onSnapshot, setDoc 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { 
-  enviarEmailConfirmacion, crearNotificacion, programarRecordatorios 
+  enviarEmailConfirmacion, enviarEmailCancelacion, crearNotificacion, programarRecordatorios 
 } from './notifications.js';
+import { iniciarCampana } from './notif-ui.js';
 
-// Variables de estado global
+// Variables de estado
 let listaUsuarios = [];
-let todosLosTurnos = [];
 let clienteSeleccionado = null;
 let barberia = { profesionales: [], servicios: {} };
-
-let vistaActual = 'lista'; // 'lista' o 'calendario'
-let calAnio = new Date().getFullYear();
-let calMes = new Date().getMonth(); // 0 - 11
+let turnosGlobales = [];
 
 const ADMIN_EMAIL = 'tomasdelatorre15@gmail.com';
+const DIAS_SEMANA = [
+  { key: 'lunes', label: 'Lunes' },
+  { key: 'martes', label: 'Martes' },
+  { key: 'miercoles', label: 'Miércoles' },
+  { key: 'jueves', label: 'Jueves' },
+  { key: 'viernes', label: 'Viernes' },
+  { key: 'sabado', label: 'Sábado' },
+  { key: 'domingo', label: 'Domingo' }
+];
 
 document.addEventListener('DOMContentLoaded', () => {
   onAuthStateChanged(auth, async (user) => {
@@ -27,7 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Verificar si es administrador
-    if (user.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    const esAdmin = (user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+    if (!esAdmin) {
       const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
       if (!userDoc.exists() || !userDoc.data().esAdmin) {
         alert('Acceso no autorizado.');
@@ -36,431 +43,368 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Cargar datos e inicializar la interfaz
+    // Iniciar campanita de notificaciones
+    iniciarCampana(user.uid, true);
+
+    // Configurar botón cerrar sesión
+    const btnLogout = document.getElementById('btnLogout');
+    if (btnLogout) {
+      btnLogout.addEventListener('click', async () => {
+        await signOut(auth);
+        window.location.href = './auth.html';
+      });
+    }
+
+    // Cargar datos e inicializar
     inicializarAdmin();
   });
 });
 
 async function inicializarAdmin() {
-  configurarBotonLogout();
-  configurarNavegacionTabs();
-  configurarToggleFormularioReserva();
-  configurarVistaCalendario();
-  
+  configurarNavegacionPestanas();
   await cargarUsuarios();
   await cargarDatosBarberia();
-  
   configurarBuscadorClientes();
-  configurarFiltrosTurnos();
   cargarTurnosAdmin();
   configurarFormularioReservaAdmin();
+  configurarGestionProfesionales();
+  configurarGestionServicios();
+  configurarGestionHorarios();
 }
 
 // -------------------------------------------------------------------
-// 1. NAVEGACIÓN Y TABS
+// 0. NAVEGACIÓN ENTRE PESTAÑAS DEL PANEL ADMIN
 // -------------------------------------------------------------------
-function configurarBotonLogout() {
-  const btnLogout = document.getElementById('btnLogout');
-  if (btnLogout) {
-    btnLogout.addEventListener('click', async () => {
-      await signOut(auth);
-      window.location.href = './auth.html';
+function configurarNavegacionPestanas() {
+  const btnTurnos = document.getElementById('btnSeccionTurnos');
+  const btnUsuarios = document.getElementById('btnSeccionUsuarios');
+  const btnProfesionales = document.getElementById('btnSeccionProfesionales');
+  const btnServicios = document.getElementById('btnSeccionServicios');
+  const btnHorarios = document.getElementById('btnSeccionHorarios');
+
+  const secTurnos = document.getElementById('seccionTurnos');
+  const secUsuarios = document.getElementById('seccionUsuarios');
+  const secProfesionales = document.getElementById('seccionProfesionales');
+  const secServicios = document.getElementById('seccionServicios');
+  const secHorarios = document.getElementById('seccionHorarios');
+
+  const todosBotones = [btnTurnos, btnUsuarios, btnProfesionales, btnServicios, btnHorarios];
+  const todasSecciones = [secTurnos, secUsuarios, secProfesionales, secServicios, secHorarios];
+
+  function activarPestana(botonActivo, seccionActiva) {
+    todasSecciones.forEach(sec => { if (sec) sec.classList.add('ocultar'); });
+    todosBotones.forEach(btn => {
+      if (btn) {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-secondary');
+      }
     });
-  }
-}
 
-function configurarNavegacionTabs() {
-  const tabs = [
-    { btnId: 'btnSeccionTurnos', secId: 'seccionTurnos' },
-    { btnId: 'btnSeccionUsuarios', secId: 'seccionUsuarios' },
-    { btnId: 'btnSeccionProfesionales', secId: 'seccionProfesionales' },
-    { btnId: 'btnSeccionServicios', secId: 'seccionServicios' },
-    { btnId: 'btnSeccionHorarios', secId: 'seccionHorarios' }
-  ];
-
-  tabs.forEach(tab => {
-    const btn = document.getElementById(tab.btnId);
-    if (btn) {
-      btn.addEventListener('click', () => {
-        tabs.forEach(t => {
-          const b = document.getElementById(t.btnId);
-          const s = document.getElementById(t.secId);
-          if (b) {
-            if (t.btnId === tab.btnId) {
-              b.classList.remove('btn-secondary');
-              b.classList.add('btn-primary');
-            } else {
-              b.classList.remove('btn-primary');
-              b.classList.add('btn-secondary');
-            }
-          }
-          if (s) {
-            if (t.secId === tab.secId) {
-              s.classList.remove('ocultar');
-            } else {
-              s.classList.add('ocultar');
-            }
-          }
-        });
-      });
+    if (seccionActiva) seccionActiva.classList.remove('ocultar');
+    if (botonActivo) {
+      botonActivo.classList.remove('btn-secondary');
+      botonActivo.classList.add('btn-primary');
     }
+  }
+
+  if (btnTurnos) btnTurnos.addEventListener('click', () => activarPestana(btnTurnos, secTurnos));
+  if (btnUsuarios) btnUsuarios.addEventListener('click', () => {
+    activarPestana(btnUsuarios, secUsuarios);
+    renderizarUsuariosAdmin();
+  });
+  if (btnProfesionales) btnProfesionales.addEventListener('click', () => {
+    activarPestana(btnProfesionales, secProfesionales);
+    renderizarProfesionalesAdmin();
+  });
+  if (btnServicios) btnServicios.addEventListener('click', () => {
+    activarPestana(btnServicios, secServicios);
+    poblarSelectProfesionalesServicios();
+  });
+  if (btnHorarios) btnHorarios.addEventListener('click', () => {
+    activarPestana(btnHorarios, secHorarios);
+    poblarSelectProfesionalesHorarios();
   });
 }
 
-function configurarToggleFormularioReserva() {
-  const btnToggle = document.getElementById('btnToggleNuevoTurno');
-  const btnCerrar = document.getElementById('btnCerrarFormAdmin');
-  const btnCancelar = document.getElementById('btnCancelarFormReserva');
-  const seccionForm = document.getElementById('seccionNuevaReserva');
-
-  const ocultarForm = () => {
-    if (seccionForm) seccionForm.classList.add('ocultar');
-  };
-
-  if (btnToggle && seccionForm) {
-    btnToggle.addEventListener('click', () => {
-      seccionForm.classList.toggle('ocultar');
-      if (!seccionForm.classList.contains('ocultar')) {
-        seccionForm.scrollIntoView({ behavior: 'smooth' });
-      }
-    });
-  }
-
-  if (btnCerrar) btnCerrar.addEventListener('click', ocultarForm);
-  if (btnCancelar) btnCancelar.addEventListener('click', ocultarForm);
-}
-
 // -------------------------------------------------------------------
-// 2. CARGAR Y BUSCAR CLIENTES (AUTOCOMPLETE)
+// 1. CARGAR Y BUSCAR CLIENTES (AUTOCOMPLETE)
 // -------------------------------------------------------------------
 async function cargarUsuarios() {
   try {
     const snap = await getDocs(collection(db, 'usuarios'));
     listaUsuarios = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderizarListaUsuarios(listaUsuarios);
-    configurarBuscadorUsuarios();
+    document.getElementById('statUsuarios').textContent = listaUsuarios.length;
   } catch (error) {
     console.error('Error al cargar usuarios:', error);
   }
 }
 
-function renderizarListaUsuarios(usuarios) {
+function renderizarUsuariosAdmin() {
   const container = document.getElementById('usuariosContainer');
-  const elStat = document.getElementById('statUsuarios');
-  if (elStat) elStat.textContent = usuarios.length;
-
+  const filtroInput = document.getElementById('filtroUsuario');
   if (!container) return;
 
-  if (usuarios.length === 0) {
-    container.innerHTML = '<p style="color:#666;">No hay usuarios registrados.</p>';
+  const queryStr = (filtroInput?.value || '').toLowerCase().trim();
+  const filtrados = listaUsuarios.filter(u => {
+    const nom = `${u.nombre || ''} ${u.apellido || ''}`.toLowerCase();
+    const mail = (u.email || '').toLowerCase();
+    const tel = (u.telefono || '').toLowerCase();
+    return nom.includes(queryStr) || mail.includes(queryStr) || tel.includes(queryStr);
+  });
+
+  if (filtrados.length === 0) {
+    container.innerHTML = '<p style="padding:15px; color:#888;">No se encontraron usuarios registrados.</p>';
     return;
   }
 
-  let html = `
-    <div style="background:#fff; border-radius:8px; padding:15px; box-shadow:0 2px 4px rgba(0,0,0,0.05); overflow-x:auto;">
+  container.innerHTML = `
+    <div style="background:#fff; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05); overflow-x:auto;">
       <table style="width:100%; border-collapse:collapse; text-align:left; font-size:14px;">
         <thead>
-          <tr style="border-bottom:2px solid #eee; color:#555;">
-            <th style="padding:10px;">Nombre</th>
-            <th style="padding:10px;">Email</th>
-            <th style="padding:10px;">Teléfono</th>
-            <th style="padding:10px;">Estado</th>
+          <tr style="background:#f8f9fa; border-bottom:2px solid #e9ecef;">
+            <th style="padding:12px;">Nombre</th>
+            <th style="padding:12px;">Email</th>
+            <th style="padding:12px;">Teléfono</th>
+            <th style="padding:12px;">Estado</th>
+            <th style="padding:12px;">Acción</th>
           </tr>
         </thead>
         <tbody>
-  `;
-
-  usuarios.forEach(u => {
-    html += `
-      <tr style="border-bottom:1px solid #f0f0f0;">
-        <td style="padding:10px; font-weight:bold;">${u.nombre || ''} ${u.apellido || ''}</td>
-        <td style="padding:10px; color:#555;">${u.email || '-'}</td>
-        <td style="padding:10px; color:#555;">${u.telefono || '-'}</td>
-        <td style="padding:10px;">
-          <span style="background:${u.bloqueado ? '#e74c3c' : '#2ecc71'}; color:#fff; padding:2px 8px; border-radius:10px; font-size:11px;">
-            ${u.bloqueado ? 'Bloqueado' : 'Activo'}
-          </span>
-        </td>
-      </tr>
-    `;
-  });
-
-  html += `
+          ${filtrados.map(u => `
+            <tr style="border-bottom:1px solid #eee;">
+              <td style="padding:12px;"><strong>${u.nombre || ''} ${u.apellido || ''}</strong></td>
+              <td style="padding:12px;">${u.email || '-'}</td>
+              <td style="padding:12px;">${u.telefono || '-'}</td>
+              <td style="padding:12px;">
+                <span style="background:${u.bloqueado ? '#e74c3c' : '#2ecc71'}; color:#fff; padding:3px 8px; border-radius:12px; font-size:12px;">
+                  ${u.bloqueado ? 'Bloqueado' : 'Activo'}
+                </span>
+              </td>
+              <td style="padding:12px;">
+                <button onclick="toggleBloqueoUsuario('${u.id}', ${!u.bloqueado})" style="background:${u.bloqueado ? '#2ecc71' : '#e74c3c'}; color:#fff; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-size:12px;">
+                  ${u.bloqueado ? 'Desbloquear' : 'Bloquear'}
+                </button>
+              </td>
+            </tr>
+          `).join('')}
         </tbody>
       </table>
     </div>
   `;
 
-  container.innerHTML = html;
-}
-
-function configurarBuscadorUsuarios() {
-  const inputFiltro = document.getElementById('filtroUsuario');
-  if (inputFiltro) {
-    inputFiltro.addEventListener('input', (e) => {
-      const q = e.target.value.toLowerCase().trim();
-      const filtrados = listaUsuarios.filter(u => {
-        const nom = `${u.nombre || ''} ${u.apellido || ''}`.toLowerCase();
-        const email = (u.email || '').toLowerCase();
-        const tel = (u.telefono || '').toLowerCase();
-        return nom.includes(q) || email.includes(q) || tel.includes(q);
-      });
-      renderizarListaUsuarios(filtrados);
-    });
+  if (filtroInput && !filtroInput.dataset.listener) {
+    filtroInput.dataset.listener = 'true';
+    filtroInput.addEventListener('input', renderizarUsuariosAdmin);
   }
 }
+
+window.toggleBloqueoUsuario = async function(uid, bloquear) {
+  try {
+    await updateDoc(doc(db, 'usuarios', uid), { bloqueado: bloquear });
+    const idx = listaUsuarios.findIndex(u => u.id === uid);
+    if (idx !== -1) listaUsuarios[idx].bloqueado = bloquear;
+    renderizarUsuariosAdmin();
+    alert(`Usuario ${bloquear ? 'bloqueado' : 'desbloqueado'} con éxito.`);
+  } catch(e) {
+    console.error('Error al cambiar estado del usuario:', e);
+    alert('Error al actualizar el usuario.');
+  }
+};
 
 function configurarBuscadorClientes() {
   const inputNombre = document.getElementById('adminClienteNombre');
   const inputApellido = document.getElementById('adminClienteApellido');
-  const contenedorAutocomplete = crearContenedorAutocomplete(inputNombre);
 
-  const buscarYMostrar = (texto) => {
-    const queryStr = texto.toLowerCase().trim();
-    if (!queryStr || queryStr.length < 2) {
-      if (contenedorAutocomplete) contenedorAutocomplete.style.display = 'none';
+  if (!inputNombre) return;
+
+  let dropdown = document.getElementById('listaClientesAutocomplete');
+  if (!dropdown) {
+    dropdown = document.createElement('div');
+    dropdown.id = 'listaClientesAutocomplete';
+    dropdown.style.cssText = 'position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ccc; max-height:180px; overflow-y:auto; z-index:1000; box-shadow:0 4px 8px rgba(0,0,0,0.1); display:none; border-radius:4px;';
+    inputNombre.parentElement.style.position = 'relative';
+    inputNombre.parentElement.appendChild(dropdown);
+  }
+
+  const buscar = (texto) => {
+    const q = texto.toLowerCase().trim();
+    if (q.length < 2) {
+      dropdown.style.display = 'none';
+      return;
+    }
+    const matches = listaUsuarios.filter(u => {
+      const nom = `${u.nombre || ''} ${u.apellido || ''}`.toLowerCase();
+      const mail = (u.email || '').toLowerCase();
+      const tel = (u.telefono || '').toLowerCase();
+      return nom.includes(q) || mail.includes(q) || tel.includes(q);
+    });
+
+    if (matches.length === 0) {
+      dropdown.innerHTML = '<div style="padding:10px; color:#888; font-size:13px;">No se encontraron clientes</div>';
+      dropdown.style.display = 'block';
       return;
     }
 
-    const coincidencias = listaUsuarios.filter(u => {
-      const nombreCompleto = `${u.nombre || ''} ${u.apellido || ''}`.toLowerCase();
-      const email = (u.email || '').toLowerCase();
-      const telefono = (u.telefono || '').toLowerCase();
-      return nombreCompleto.includes(queryStr) || email.includes(queryStr) || telefono.includes(queryStr);
+    dropdown.innerHTML = matches.map(u => `
+      <div class="ac-item" data-id="${u.id}" style="padding:10px; cursor:pointer; border-bottom:1px solid #eee;">
+        <strong>${u.nombre || ''} ${u.apellido || ''}</strong><br>
+        <small style="color:#666;">📧 ${u.email || 'Sin mail'} | 📞 ${u.telefono || 'Sin tel'}</small>
+      </div>
+    `).join('');
+
+    dropdown.querySelectorAll('.ac-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const u = matches.find(item => item.id === el.dataset.id);
+        if (u) {
+          clienteSeleccionado = u;
+          if (document.getElementById('adminClienteNombre')) document.getElementById('adminClienteNombre').value = u.nombre || '';
+          if (document.getElementById('adminClienteApellido')) document.getElementById('adminClienteApellido').value = u.apellido || '';
+          if (document.getElementById('adminClienteTelefono')) document.getElementById('adminClienteTelefono').value = u.telefono || '';
+          if (document.getElementById('adminClienteEmail')) document.getElementById('adminClienteEmail').value = u.email || '';
+        }
+        dropdown.style.display = 'none';
+      });
     });
 
-    renderizarAutocomplete(coincidencias, contenedorAutocomplete);
+    dropdown.style.display = 'block';
   };
 
-  if (inputNombre) {
-    inputNombre.addEventListener('input', (e) => buscarYMostrar(e.target.value));
-  }
+  inputNombre.addEventListener('input', (e) => buscar(e.target.value));
   if (inputApellido) {
-    inputApellido.addEventListener('input', () => {
-      const nom = inputNombre ? inputNombre.value : '';
-      buscarYMostrar(`${nom} ${inputApellido.value}`);
-    });
+    inputApellido.addEventListener('input', () => buscar(`${inputNombre.value} ${inputApellido.value}`));
   }
 
   document.addEventListener('click', (e) => {
-    if (contenedorAutocomplete && !contenedorAutocomplete.contains(e.target) && e.target !== inputNombre) {
-      contenedorAutocomplete.style.display = 'none';
+    if (dropdown && !dropdown.contains(e.target) && e.target !== inputNombre) {
+      dropdown.style.display = 'none';
     }
   });
 }
 
-function crearContenedorAutocomplete(inputRef) {
-  if (!inputRef) return null;
-  const parent = inputRef.parentElement;
-  if (!parent) return null;
-  parent.style.position = 'relative';
-
-  let listDiv = document.getElementById('listaClientesAutocomplete');
-  if (!listDiv) {
-    listDiv = document.createElement('div');
-    listDiv.id = 'listaClientesAutocomplete';
-    listDiv.className = 'autocomplete-dropdown';
-    listDiv.style.cssText = 'position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #ccc; max-height:200px; overflow-y:auto; z-index:1000; box-shadow:0 4px 8px rgba(0,0,0,0.1); display:none; border-radius:4px;';
-    parent.appendChild(listDiv);
-  }
-  return listDiv;
-}
-
-function renderizarAutocomplete(coincidencias, contenedor) {
-  if (!contenedor) return;
-  contenedor.innerHTML = '';
-
-  if (coincidencias.length === 0) {
-    contenedor.innerHTML = '<div style="padding:10px; color:#888;">No se encontraron clientes registrados.</div>';
-    contenedor.style.display = 'block';
-    return;
-  }
-
-  coincidencias.forEach(u => {
-    const item = document.createElement('div');
-    item.style.cssText = 'padding:10px; cursor:pointer; border-bottom:1px solid #eee; transition:background 0.2s;';
-    item.innerHTML = `
-      <strong>${u.nombre || ''} ${u.apellido || ''}</strong><br>
-      <small style="color:#666;">📧 ${u.email || 'Sin email'} | 📞 ${u.telefono || 'Sin tel'}</small>
-    `;
-    item.addEventListener('mouseenter', () => item.style.background = '#f0f0f0');
-    item.addEventListener('mouseleave', () => item.style.background = '#fff');
-    item.addEventListener('click', () => seleccionarCliente(u, contenedor));
-    contenedor.appendChild(item);
-  });
-
-  contenedor.style.display = 'block';
-}
-
-function seleccionarCliente(u, contenedor) {
-  clienteSeleccionado = u;
-  
-  const inputNombre = document.getElementById('adminClienteNombre');
-  const inputApellido = document.getElementById('adminClienteApellido');
-  const inputTel = document.getElementById('adminClienteTelefono');
-  const inputEmail = document.getElementById('adminClienteEmail');
-
-  if (inputNombre) inputNombre.value = u.nombre || '';
-  if (inputApellido) inputApellido.value = u.apellido || '';
-  if (inputTel) inputTel.value = u.telefono || '';
-  if (inputEmail) inputEmail.value = u.email || '';
-
-  if (contenedor) contenedor.style.display = 'none';
-}
-
 // -------------------------------------------------------------------
-// 3. ESTADÍSTICAS (TOTALES DEL MES)
-// -------------------------------------------------------------------
-function actualizarEstadisticas(turnos) {
-  const hoyObj = new Date();
-  const yyyy = hoyObj.getFullYear();
-  const mm = String(hoyObj.getMonth() + 1).padStart(2, '0');
-  const dd = String(hoyObj.getDate()).padStart(2, '0');
-
-  const mesActualStr = `${yyyy}-${mm}`;
-  const hoyStr = `${yyyy}-${mm}-${dd}`;
-
-  // REQUISITO: "Turnos totales" es únicamente el conteo del mes actual
-  const turnosMes = turnos.filter(t => t.fecha && t.fecha.startsWith(mesActualStr) && t.estado !== 'cancelado');
-  const turnosHoy = turnos.filter(t => t.fecha === hoyStr && t.estado !== 'cancelado');
-  const turnosProximos = turnos.filter(t => t.fecha >= hoyStr && t.estado !== 'cancelado');
-
-  const elTotal = document.getElementById('statTotal');
-  const elProximos = document.getElementById('statProximos');
-  const elHoy = document.getElementById('statHoy');
-
-  if (elTotal) elTotal.textContent = turnosMes.length;
-  if (elProximos) elProximos.textContent = turnosProximos.length;
-  if (elHoy) elHoy.textContent = turnosHoy.length;
-}
-
-// -------------------------------------------------------------------
-// 4. CARGAR Y RENDEREAR TURNOS (LISTA Y CALENDARIO)
+// 2. TURNOS: MOSTRAR, CALENDARIO, FILTROS Y ESTADÍSTICAS DEL MES
 // -------------------------------------------------------------------
 function cargarTurnosAdmin() {
-  const loadingMsg = document.getElementById('loadingMsg');
-  if (loadingMsg) loadingMsg.classList.remove('ocultar');
+  const container = document.getElementById('turnosListaContainer');
+  if (!container) return;
+
+  container.innerHTML = '<p style="text-align:center; padding:20px; color:#666;">Cargando turnos...</p>';
 
   onSnapshot(collection(db, 'turnos'), (snapshot) => {
-    if (loadingMsg) loadingMsg.classList.add('ocultar');
+    turnosGlobales = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    todosLosTurnos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    // Ordenar turnos en memoria por fecha y hora
-    todosLosTurnos.sort((a, b) => {
+    // Ordenar turnos por fecha y hora
+    turnosGlobales.sort((a, b) => {
       const fechaA = `${a.fecha || ''} ${a.horario || ''}`;
       const fechaB = `${b.fecha || ''} ${b.horario || ''}`;
       return fechaA.localeCompare(fechaB);
     });
 
-    actualizarEstadisticas(todosLosTurnos);
-
-    if (vistaActual === 'calendario') {
-      renderizarCalendario(todosLosTurnos);
-    } else {
-      filtrarYRenderizarTurnos();
-    }
+    actualizarEstadisticas();
+    renderizarListaTurnos();
+    configurarVistaCalendario();
   }, (error) => {
-    console.error('Error al cargar turnos:', error);
-    if (loadingMsg) loadingMsg.textContent = 'Error al cargar los turnos.';
+    console.error('Error escuchando turnos:', error);
+    container.innerHTML = '<p class="error">Error al cargar turnos.</p>';
   });
+
+  // Filtros de lista
+  const filtroProf = document.getElementById('filtroProfesional');
+  const filtroFecha = document.getElementById('filtroFecha');
+  if (filtroProf) filtroProf.addEventListener('change', renderizarListaTurnos);
+  if (filtroFecha) filtroFecha.addEventListener('change', renderizarListaTurnos);
 }
 
-function configurarFiltrosTurnos() {
-  const selectProf = document.getElementById('filtroProfesional');
-  const inputFecha = document.getElementById('filtroFecha');
-  const btnLimpiar = document.getElementById('btnLimpiarFiltros');
+function actualizarEstadisticas() {
+  const ahora = new Date();
+  const anioActual = ahora.getFullYear();
+  const mesActual = String(ahora.getMonth() + 1).padStart(2, '0');
+  const mesKey = `${anioActual}-${mesActual}`;
+  const hoyStr = `${anioActual}-${mesActual}-${String(ahora.getDate()).padStart(2, '0')}`;
 
-  const manejarCambioFiltros = () => {
-    const profVal = selectProf?.value;
-    const fechaVal = inputFecha?.value;
+  // 1. Total turnos exclusivamente del mes actual
+  const turnosMes = turnosGlobales.filter(t => (t.fecha || '').startsWith(mesKey) && t.estado !== 'cancelado');
+  document.getElementById('statTotal').textContent = turnosMes.length;
 
-    if (btnLimpiar) {
-      if (profVal || fechaVal) {
-        btnLimpiar.style.display = 'inline-block';
-      } else {
-        btnLimpiar.style.display = 'none';
-      }
-    }
+  // 2. Próximos
+  const proximos = turnosGlobales.filter(t => t.fecha >= hoyStr && t.estado !== 'cancelado');
+  document.getElementById('statProximos').textContent = proximos.length;
 
-    if (vistaActual === 'calendario') {
-      renderizarCalendario(todosLosTurnos);
-    } else {
-      filtrarYRenderizarTurnos();
-    }
-  };
-
-  if (selectProf) selectProf.addEventListener('change', manejarCambioFiltros);
-  if (inputFecha) inputFecha.addEventListener('change', manejarCambioFiltros);
-
-  if (btnLimpiar) {
-    btnLimpiar.addEventListener('click', () => {
-      if (selectProf) selectProf.value = '';
-      if (inputFecha) inputFecha.value = '';
-      btnLimpiar.style.display = 'none';
-      filtrarYRenderizarTurnos();
-    });
-  }
+  // 3. Hoy
+  const hoy = turnosGlobales.filter(t => t.fecha === hoyStr && t.estado !== 'cancelado');
+  document.getElementById('statHoy').textContent = hoy.length;
 }
 
-function filtrarYRenderizarTurnos() {
-  const profFiltro = document.getElementById('filtroProfesional')?.value;
-  const fechaFiltro = document.getElementById('filtroFecha')?.value;
-
-  let turnosFiltrados = [...todosLosTurnos];
-
-  if (profFiltro) {
-    turnosFiltrados = turnosFiltrados.filter(t => t.profesional === profFiltro);
-  }
-
-  if (fechaFiltro) {
-    turnosFiltrados = turnosFiltrados.filter(t => t.fecha === fechaFiltro);
-  }
-
+function renderizarListaTurnos() {
   const container = document.getElementById('turnosListaContainer');
-  if (container) {
-    renderizarListaTurnosAdmin(turnosFiltrados, container);
-  }
-}
+  if (!container) return;
 
-function renderizarListaTurnosAdmin(turnos, contenedor) {
-  contenedor.innerHTML = '';
+  const profFiltro = document.getElementById('filtroProfesional')?.value || '';
+  const fechaFiltro = document.getElementById('filtroFecha')?.value || '';
 
-  if (turnos.length === 0) {
-    contenedor.innerHTML = '<p style="text-align:center; color:#7f8c8d; padding:20px;">No se encontraron turnos con los criterios seleccionados.</p>';
+  const filtrados = turnosGlobales.filter(t => {
+    if (profFiltro && t.profesional !== profFiltro) return false;
+    if (fechaFiltro && t.fecha !== fechaFiltro) return false;
+    return true;
+  });
+
+  if (filtrados.length === 0) {
+    container.innerHTML = '<p style="padding:20px; text-align:center; color:#888;">No se encontraron turnos con los filtros seleccionados.</p>';
     return;
   }
 
-  turnos.forEach(t => {
-    const card = document.createElement('div');
-    card.className = 'turno-card-admin';
-    card.style.cssText = 'background:#fff; border-left:4px solid #3498db; padding:15px; margin-bottom:12px; border-radius:6px; box-shadow:0 2px 4px rgba(0,0,0,0.05);';
-    if (t.estado === 'cancelado') card.style.borderLeftColor = '#e74c3c';
-
-    card.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:5px;">
-        <h4 style="margin:0; color:#2c3e50;">📅 ${t.fechaFormato || t.fecha} - ⏰ ${t.horario}</h4>
-        <span style="background:${t.estado === 'cancelado' ? '#e74c3c' : '#2ecc71'}; color:#fff; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:bold;">
+  container.innerHTML = filtrados.map(t => `
+    <div style="background:#fff; border-left:4px solid ${t.estado === 'cancelado' ? '#e74c3c' : '#3498db'}; padding:15px; margin-bottom:12px; border-radius:6px; box-shadow:0 2px 4px rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <h4 style="margin:0 0 5px; color:#2c3e50;">📅 ${t.fechaFormato || t.fecha} - ⏰ ${t.horario}</h4>
+        <p style="margin:2px 0; font-size:14px;"><strong>Cliente:</strong> ${t.clienteNombre || 'Cliente'} (${t.clienteTelefono || 'Sin tel'}) - 📧 ${t.clienteEmail || 'Sin email'}</p>
+        <p style="margin:2px 0; font-size:13px; color:#666;"><strong>Servicio:</strong> ${t.servicio} con <strong>${t.profesional}</strong></p>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+        <span style="background:${t.estado === 'cancelado' ? '#e74c3c' : '#2ecc71'}; color:#fff; padding:4px 10px; border-radius:12px; font-size:12px; font-weight:bold;">
           ${t.estado || 'confirmado'}
         </span>
+        ${t.estado !== 'cancelado' ? `
+          <button onclick="cancelarTurnoAdmin('${t.id}')" style="background:#e74c3c; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:13px;">
+            Cancelar Turno
+          </button>
+        ` : ''}
       </div>
-      <p style="margin:8px 0 4px; color:#333;"><strong>Cliente:</strong> ${t.clienteNombre || 'Cliente'} ${t.clienteTelefono ? `(${t.clienteTelefono})` : ''} ${t.clienteEmail ? `- 📧 ${t.clienteEmail}` : ''}</p>
-      <p style="margin:0; color:#555;"><strong>Servicio:</strong> ${t.servicio || 'Servicio'} con <strong>${t.profesional || 'Profesional'}</strong></p>
-      ${t.estado !== 'cancelado' ? `
-        <div style="margin-top:10px; text-align:right;">
-          <button onclick="cancelarTurnoAdmin('${t.id}')" class="btn btn-sm" style="background:#e74c3c; color:#fff; border:none; padding:5px 12px; border-radius:4px; cursor:pointer;">Cancelar Turno</button>
-        </div>
-      ` : ''}
-    `;
-    contenedor.appendChild(card);
-  });
+    </div>
+  `).join('');
 }
 
+// Cancelación de turno con envío de correos a cliente y admin
 window.cancelarTurnoAdmin = async function(turnoId) {
   if (!confirm('¿Seguro que querés cancelar este turno?')) return;
   try {
-    await updateDoc(doc(db, 'turnos', turnoId), { estado: 'cancelado' });
-    alert('Turno cancelado correctamente.');
+    const turnoRef = doc(db, 'turnos', turnoId);
+    const snap = await getDoc(turnoRef);
+    if (snap.exists()) {
+      const turnoData = { id: snap.id, ...snap.data() };
+      await updateDoc(turnoRef, { estado: 'cancelado' });
+
+      // Enviar correos de cancelación a cliente y admin
+      await enviarEmailCancelacion(turnoData, 'admin');
+
+      // Notificaciones in-app
+      if (turnoData.usuarioId) {
+        await crearNotificacion({
+          para: turnoData.usuarioId,
+          tipo: 'cancelacion',
+          mensaje: `Tu turno con ${turnoData.profesional} del ${turnoData.fechaFormato || turnoData.fecha} a las ${turnoData.horario} fue cancelado por el administrador.`,
+          turnoId
+        });
+      }
+      await crearNotificacion({
+        para: 'admin',
+        tipo: 'cancelacion',
+        mensaje: `Cancelaste el turno de ${turnoData.clienteNombre || 'Cliente'} (${turnoData.fechaFormato || turnoData.fecha} ${turnoData.horario}).`,
+        turnoId
+      });
+    }
+
+    alert('Turno cancelado y notificaciones enviadas.');
   } catch (error) {
     console.error('Error al cancelar turno:', error);
     alert('Error al cancelar el turno.');
@@ -468,166 +412,138 @@ window.cancelarTurnoAdmin = async function(turnoId) {
 };
 
 // -------------------------------------------------------------------
-// 5. VISTA CALENDARIO
+// 3. CALENDARIO INTERACTIVO ("VER CALENDARIO")
 // -------------------------------------------------------------------
+let fechaCalendario = new Date();
+
 function configurarVistaCalendario() {
   const btnVista = document.getElementById('btnVista');
   const vistaLista = document.getElementById('vistaLista');
   const vistaCalendario = document.getElementById('vistaCalendario');
+  const filtrosLista = document.getElementById('filtrosLista');
 
-  if (btnVista) {
-    btnVista.addEventListener('click', () => {
-      if (vistaActual === 'lista') {
-        vistaActual = 'calendario';
-        btnVista.textContent = '📋 Ver Lista';
-        if (vistaLista) vistaLista.classList.add('ocultar');
-        if (vistaCalendario) vistaCalendario.classList.remove('ocultar');
-        renderizarCalendario(todosLosTurnos);
-      } else {
-        vistaActual = 'lista';
-        btnVista.textContent = '📅 Ver Calendario';
-        if (vistaCalendario) vistaCalendario.classList.add('ocultar');
-        if (vistaLista) vistaLista.classList.remove('ocultar');
-      }
-    });
-  }
+  if (!btnVista || !vistaLista || !vistaCalendario) return;
+
+  btnVista.onclick = () => {
+    const esCalendario = !vistaCalendario.classList.contains('ocultar');
+    if (esCalendario) {
+      vistaCalendario.classList.add('ocultar');
+      vistaLista.classList.remove('ocultar');
+      if (filtrosLista) filtrosLista.style.display = 'flex';
+      btnVista.textContent = '📅 Ver Calendario';
+    } else {
+      vistaLista.classList.add('ocultar');
+      vistaCalendario.classList.remove('ocultar');
+      if (filtrosLista) filtrosLista.style.display = 'none';
+      btnVista.textContent = '📋 Ver Lista';
+      renderizarCalendarioAdmin();
+    }
+  };
 }
 
-function renderizarCalendario(turnos) {
+function renderizarCalendarioAdmin() {
   const container = document.getElementById('calendarioContainer');
   if (!container) return;
 
-  const mesesNombres = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ];
+  const anio = fechaCalendario.getFullYear();
+  const mes = fechaCalendario.getMonth();
+  const primerDiaMes = new Date(anio, mes, 1);
+  const ultimoDiaMes = new Date(anio, mes + 1, 0);
 
-  const primerDiaMes = new Date(calAnio, calMes, 1).getDay();
-  const diasEnMes = new Date(calAnio, calMes + 1, 0).getDate();
+  const nombreMes = fechaCalendario.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
 
-  const hoyObj = new Date();
-  const esMesActual = hoyObj.getFullYear() === calAnio && hoyObj.getMonth() === calMes;
-  const diaHoy = hoyObj.getDate();
+  // Agrupar turnos por fecha
+  const turnosPorFecha = {};
+  turnosGlobales.forEach(t => {
+    if (t.estado === 'cancelado') return;
+    if (!turnosPorFecha[t.fecha]) turnosPorFecha[t.fecha] = [];
+    turnosPorFecha[t.fecha].push(t);
+  });
 
   let html = `
-    <div style="background:#fff; border-radius:8px; padding:20px; box-shadow:0 2px 4px rgba(0,0,0,0.05); overflow-x:auto;">
-      <!-- Header del Calendario -->
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <button class="btn btn-secondary btn-sm" id="calPrevMes" style="padding:4px 10px;">◀</button>
-          <h3 style="margin:0; min-width:180px; text-align:center; color:#2c3e50;">${mesesNombres[calMes]} ${calAnio}</h3>
-          <button class="btn btn-secondary btn-sm" id="calNextMes" style="padding:4px 10px;">▶</button>
-        </div>
-        <button class="btn btn-outline btn-sm" id="calHoyBtn">Ir a Hoy</button>
+    <div style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <button id="calPrevMes" class="btn btn-secondary btn-sm">&lt; Anterior</button>
+        <h3 style="margin:0; text-transform:capitalize;">${nombreMes}</h3>
+        <button id="calNextMes" class="btn btn-secondary btn-sm">Siguiente &gt;</button>
       </div>
 
-      <!-- Días de la Semana -->
-      <div style="display:grid; grid-template-columns:repeat(7, minmax(110px, 1fr)); gap:6px; min-width:700px;">
-        <div style="font-weight:bold; padding:8px; background:#f8f9fa; border-radius:4px; text-align:center; color:#555;">Dom</div>
-        <div style="font-weight:bold; padding:8px; background:#f8f9fa; border-radius:4px; text-align:center; color:#555;">Lun</div>
-        <div style="font-weight:bold; padding:8px; background:#f8f9fa; border-radius:4px; text-align:center; color:#555;">Mar</div>
-        <div style="font-weight:bold; padding:8px; background:#f8f9fa; border-radius:4px; text-align:center; color:#555;">Mié</div>
-        <div style="font-weight:bold; padding:8px; background:#f8f9fa; border-radius:4px; text-align:center; color:#555;">Jue</div>
-        <div style="font-weight:bold; padding:8px; background:#f8f9fa; border-radius:4px; text-align:center; color:#555;">Vie</div>
-        <div style="font-weight:bold; padding:8px; background:#f8f9fa; border-radius:4px; text-align:center; color:#555;">Sáb</div>
+      <div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:5px; text-align:center; font-weight:bold; margin-bottom:10px; font-size:13px; color:#7f8c8d;">
+        <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:5px;">
   `;
 
-  // Celdas vacías previas
-  for (let i = 0; i < primerDiaMes; i++) {
-    html += `<div style="min-height:95px; background:#fafafa; border-radius:4px; opacity:0.3;"></div>`;
+  // Espacios en blanco para el primer día
+  for (let i = 0; i < primerDiaMes.getDay(); i++) {
+    html += `<div style="background:#f8f9fa; border-radius:4px; min-height:80px;"></div>`;
   }
+
+  const hoyStr = new Date().toISOString().split('T')[0];
 
   // Días del mes
-  for (let dia = 1; dia <= diasEnMes; dia++) {
-    const mmStr = String(calMes + 1).padStart(2, '0');
-    const ddStr = String(dia).padStart(2, '0');
-    const fechaStr = `${calAnio}-${mmStr}-${ddStr}`;
-
-    const esHoy = esMesActual && dia === diaHoy;
-    const turnosDelDia = turnos.filter(t => t.fecha === fechaStr && t.estado !== 'cancelado');
-
-    const bgEstilo = esHoy ? 'background:#e8f4fc; border:2px solid #3498db;' : 'background:#fff; border:1px solid #e2e8f0;';
+  for (let d = 1; d <= ultimoDiaMes.getDate(); d++) {
+    const mm = String(mes + 1).padStart(2, '0');
+    const dd = String(d).padStart(2, '0');
+    const fKey = `${anio}-${mm}-${dd}`;
+    const turnosDia = turnosPorFecha[fKey] || [];
+    const esHoy = fKey === hoyStr;
 
     html += `
-      <div class="cal-day-cell" data-fecha="${fechaStr}" style="min-height:95px; padding:6px; border-radius:4px; text-align:left; font-size:12px; cursor:pointer; transition:all 0.2s; ${bgEstilo}">
-        <div style="font-weight:bold; font-size:13px; margin-bottom:4px; color:${esHoy ? '#2980b9' : '#333'}; display:flex; justify-content:space-between; align-items:center;">
-          <span>${dia}</span>
-          ${turnosDelDia.length > 0 ? `<span style="background:#27ae60; color:#fff; border-radius:10px; padding:1px 6px; font-size:10px;">${turnosDelDia.length}</span>` : ''}
-        </div>
-        <div style="display:flex; flex-direction:column; gap:2px;">
-    `;
-
-    turnosDelDia.slice(0, 2).forEach(t => {
-      html += `
-        <div style="background:#3498db; color:#fff; padding:2px 4px; border-radius:3px; font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${t.horario} - ${t.clienteNombre || ''}">
-          ⏰ ${t.horario} ${t.clienteNombre ? t.clienteNombre.split(' ')[0] : ''}
-        </div>
-      `;
-    });
-
-    if (turnosDelDia.length > 2) {
-      html += `<div style="font-size:10px; color:#7f8c8d; text-align:center; margin-top:2px;">+${turnosDelDia.length - 2} más</div>`;
-    }
-
-    html += `
-        </div>
+      <div class="cal-dia-cell" data-fecha="${fKey}" style="background:${esHoy ? '#e8f4f8' : '#fff'}; border:1px solid ${esHoy ? '#3498db' : '#e0e0e0'}; border-radius:4px; min-height:80px; padding:5px; font-size:12px; cursor:pointer; overflow:hidden;">
+        <div style="font-weight:bold; color:${esHoy ? '#2980b9' : '#333'}; margin-bottom:4px;">${d}</div>
+        ${turnosDia.length > 0 ? `
+          <div style="background:#2ecc71; color:#fff; padding:2px 4px; border-radius:3px; font-size:10px; font-weight:bold; text-align:center; margin-bottom:2px;">
+            ${turnosDia.length} turno(s)
+          </div>
+          ${turnosDia.slice(0, 2).map(t => `<div style="font-size:10px; color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">• ${t.horario} ${t.clienteNombre || ''}</div>`).join('')}
+          ${turnosDia.length > 2 ? `<div style="font-size:9px; color:#888;">+${turnosDia.length - 2} más</div>` : ''}
+        ` : ''}
       </div>
     `;
   }
 
-  html += `
-      </div>
-    </div>
-  `;
-
+  html += `</div></div>`;
   container.innerHTML = html;
 
-  // Botones de navegación
-  document.getElementById('calPrevMes')?.addEventListener('click', () => {
-    calMes--;
-    if (calMes < 0) { calMes = 11; calAnio--; }
-    renderizarCalendario(turnos);
-  });
+  document.getElementById('calPrevMes').onclick = () => {
+    fechaCalendario.setMonth(fechaCalendario.getMonth() - 1);
+    renderizarCalendarioAdmin();
+  };
+  document.getElementById('calNextMes').onclick = () => {
+    fechaCalendario.setMonth(fechaCalendario.getMonth() + 1);
+    renderizarCalendarioAdmin();
+  };
 
-  document.getElementById('calNextMes')?.addEventListener('click', () => {
-    calMes++;
-    if (calMes > 11) { calMes = 0; calAnio++; }
-    renderizarCalendario(turnos);
-  });
-
-  document.getElementById('calHoyBtn')?.addEventListener('click', () => {
-    const hoy = new Date();
-    calAnio = hoy.getFullYear();
-    calMes = hoy.getMonth();
-    renderizarCalendario(turnos);
-  });
-
-  // Al hacer clic en un día del calendario, filtrar en la lista por esa fecha
-  document.querySelectorAll('.cal-day-cell').forEach(cell => {
-    cell.addEventListener('click', () => {
-      const fecha = cell.dataset.fecha;
-      if (fecha) {
-        const inputFiltroFecha = document.getElementById('filtroFecha');
-        if (inputFiltroFecha) {
-          inputFiltroFecha.value = fecha;
-          vistaActual = 'lista';
-          const btnVista = document.getElementById('btnVista');
-          if (btnVista) btnVista.textContent = '📅 Ver Calendario';
-          document.getElementById('vistaCalendario')?.classList.add('ocultar');
-          document.getElementById('vistaLista')?.classList.remove('ocultar');
-          filtrarYRenderizarTurnos();
-        }
-      }
-    });
+  container.querySelectorAll('.cal-dia-cell').forEach(cell => {
+    cell.onclick = () => {
+      const f = cell.dataset.fecha;
+      document.getElementById('filtroFecha').value = f;
+      document.getElementById('btnVista').click(); // Volver a lista filtrada
+    };
   });
 }
 
 // -------------------------------------------------------------------
-// 6. CONFIRMAR RESERVA DESDE ADMIN
+// 4. FORMULARIO RESERVA DESDE ADMIN (BOTÓN DESPLEGABLE)
 // -------------------------------------------------------------------
 function configurarFormularioReservaAdmin() {
   const formAdminReserva = document.getElementById('formAdminReserva');
-  if (!formAdminReserva) return;
+  const btnToggleForm = document.getElementById('btnToggleFormReserva');
+  const btnCerrarForm = document.getElementById('btnCerrarFormReserva');
+  const btnCancelarForm = document.getElementById('btnCancelarFormReserva');
+  const seccionReserva = document.getElementById('seccionNuevaReserva');
+
+  if (!formAdminReserva || !seccionReserva) return;
+
+  const ocultarForm = () => seccionReserva.classList.add('ocultar');
+  const mostrarForm = () => seccionReserva.classList.remove('ocultar');
+
+  if (btnToggleForm) btnToggleForm.addEventListener('click', () => {
+    seccionReserva.classList.contains('ocultar') ? mostrarForm() : ocultarForm();
+  });
+  if (btnCerrarForm) btnCerrarForm.addEventListener('click', ocultarForm);
+  if (btnCancelarForm) btnCancelarForm.addEventListener('click', ocultarForm);
 
   formAdminReserva.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -643,7 +559,7 @@ function configurarFormularioReservaAdmin() {
     const email = document.getElementById('adminClienteEmail')?.value.trim();
 
     if (!profesional || !servicio || !fecha || !horario || !nombre) {
-      alert('Por favor completá todos los campos obligatorios (*).');
+      alert('Por favor completá todos los campos obligatorios.');
       return;
     }
 
@@ -665,53 +581,336 @@ function configurarFormularioReservaAdmin() {
     };
 
     try {
-      const btnSubmit = document.getElementById('btnGuardarReservaAdmin');
+      const btnSubmit = formAdminReserva.querySelector('button[type="submit"]');
       if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = 'Guardando...'; }
 
-      // 1. Guardar turno en Firestore
       const docRef = await addDoc(collection(db, "turnos"), nuevoTurno);
 
-      // 2. Enviar notificaciones y correo
-      try {
-        if (email) {
-          await enviarEmailConfirmacion(nuevoTurno);
-        }
-
-        if (clienteSeleccionado && clienteSeleccionado.id) {
-          await crearNotificacion({
-            para: clienteSeleccionado.id,
-            tipo: 'confirmacion',
-            mensaje: `El administrador te reservó un turno: ${profesional} - ${fechaFormato} a las ${horario}`,
-            turnoId: docRef.id
-          });
-        }
-
-        await programarRecordatorios({ ...nuevoTurno, id: docRef.id });
-
-      } catch (notifError) {
-        console.error('Error enviando notificaciones:', notifError);
+      if (email) {
+        await enviarEmailConfirmacion(nuevoTurno);
       }
 
-      alert('¡Turno reservado con éxito!');
-      
-      // Ocultar y reiniciar formulario
+      if (clienteSeleccionado && clienteSeleccionado.id) {
+        await crearNotificacion({
+          para: clienteSeleccionado.id,
+          tipo: 'confirmacion',
+          mensaje: `El administrador te reservó un turno: ${profesional} - ${fechaFormato} a las ${horario}`,
+          turnoId: docRef.id
+        });
+      }
+
+      await programarRecordatorios({ ...nuevoTurno, id: docRef.id });
+
+      alert('¡Turno reservado con éxito y notificación enviada al cliente!');
       formAdminReserva.reset();
       clienteSeleccionado = null;
-      document.getElementById('seccionNuevaReserva')?.classList.add('ocultar');
+      ocultarForm();
 
       if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = 'Guardar Reserva'; }
 
     } catch (error) {
       console.error('Error al guardar reserva admin:', error);
       alert('Error al guardar la reserva.');
-      const btnSubmit = document.getElementById('btnGuardarReservaAdmin');
-      if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = 'Guardar Reserva'; }
     }
   });
 }
 
 // -------------------------------------------------------------------
-// 7. DATOS DE BARBERÍA Y SELECTS DINÁMICOS
+// 5. GESTIÓN DE PROFESIONALES
+// -------------------------------------------------------------------
+function configurarGestionProfesionales() {
+  const formProf = document.getElementById('formAgregarProfesional');
+  if (!formProf) return;
+
+  formProf.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nombre = document.getElementById('profNombreInput').value.trim();
+    const orden = parseInt(document.getElementById('profOrdenInput').value) || 1;
+
+    if (!nombre) return;
+
+    try {
+      await addDoc(collection(db, 'profesionales'), {
+        nombre,
+        orden,
+        creadoEn: new Date().toISOString()
+      });
+      alert('Profesional agregado con éxito.');
+      formProf.reset();
+      await cargarDatosBarberia();
+      renderizarProfesionalesAdmin();
+    } catch(err) {
+      console.error('Error al agregar profesional:', err);
+      alert('Error al guardar profesional.');
+    }
+  });
+}
+
+function renderizarProfesionalesAdmin() {
+  const container = document.getElementById('profesionalesAdminContainer');
+  if (!container) return;
+
+  if (barberia.profesionales.length === 0) {
+    container.innerHTML = '<p style="padding:15px; color:#888;">No hay profesionales configurados.</p>';
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:15px;">
+      ${barberia.profesionales.map(p => `
+        <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <h4 style="margin:0 0 5px;">${p.nombre}</h4>
+            <small style="color:#7f8c8d;">Orden: ${p.orden || 1}</small>
+          </div>
+          <button onclick="eliminarProfesionalAdmin('${p.id}')" style="background:#e74c3c; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">
+            Eliminar
+          </button>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+window.eliminarProfesionalAdmin = async function(profId) {
+  if (!confirm('¿Seguro que querés eliminar este profesional y sus servicios asociados?')) return;
+  try {
+    await deleteDoc(doc(db, 'profesionales', profId));
+    alert('Profesional eliminado.');
+    await cargarDatosBarberia();
+    renderizarProfesionalesAdmin();
+  } catch(e) {
+    console.error('Error al eliminar profesional:', e);
+    alert('Error al eliminar.');
+  }
+};
+
+// -------------------------------------------------------------------
+// 6. GESTIÓN DE SERVICIOS
+// -------------------------------------------------------------------
+function configurarGestionServicios() {
+  const selectProf = document.getElementById('servProfSelect');
+  const formServ = document.getElementById('formAgregarServicio');
+
+  if (selectProf) {
+    selectProf.addEventListener('change', (e) => {
+      cargarServiciosDelProfesional(e.target.value);
+    });
+  }
+
+  if (formServ) {
+    formServ.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const profId = selectProf.value;
+      if (!profId) {
+        alert('Por favor seleccioná un profesional primero.');
+        return;
+      }
+
+      const nombre = document.getElementById('servNombreInput').value.trim();
+      const precio = parseFloat(document.getElementById('servPrecioInput').value) || 0;
+      const duracion = document.getElementById('servDuracionInput').value.trim();
+      const orden = parseInt(document.getElementById('servOrdenInput').value) || 1;
+
+      try {
+        await addDoc(collection(db, `profesionales/${profId}/servicios`), {
+          nombre,
+          precio,
+          duracion,
+          orden
+        });
+        alert('Servicio agregado con éxito.');
+        formServ.reset();
+        cargarServiciosDelProfesional(profId);
+      } catch(err) {
+        console.error('Error al agregar servicio:', err);
+        alert('Error al guardar el servicio.');
+      }
+    });
+  }
+}
+
+function poblarSelectProfesionalesServicios() {
+  const selectProf = document.getElementById('servProfSelect');
+  if (!selectProf) return;
+  selectProf.innerHTML = '<option value="">Seleccionar profesional...</option>' + 
+    barberia.profesionales.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+  document.getElementById('serviciosAdminContainer').innerHTML = '';
+}
+
+async function cargarServiciosDelProfesional(profId) {
+  const container = document.getElementById('serviciosAdminContainer');
+  if (!container) return;
+
+  if (!profId) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = '<p style="padding:10px; color:#888;">Cargando servicios...</p>';
+
+  try {
+    const snap = await getDocs(query(collection(db, `profesionales/${profId}/servicios`), orderBy('orden')));
+    const servicios = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (servicios.length === 0) {
+      container.innerHTML = '<p style="padding:15px; color:#888;">Este profesional aún no tiene servicios configurados.</p>';
+      return;
+    }
+
+    container.innerHTML = `
+      <div style="background:#fff; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05); padding:15px;">
+        <table style="width:100%; border-collapse:collapse; font-size:14px;">
+          <thead>
+            <tr style="border-bottom:2px solid #eee; text-align:left;">
+              <th style="padding:10px;">Servicio</th>
+              <th style="padding:10px;">Precio</th>
+              <th style="padding:10px;">Duración</th>
+              <th style="padding:10px;">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${servicios.map(s => `
+              <tr style="border-bottom:1px solid #f9f9f9;">
+                <td style="padding:10px;"><strong>${s.nombre}</strong></td>
+                <td style="padding:10px;">$${s.precio}</td>
+                <td style="padding:10px;">${s.duracion}</td>
+                <td style="padding:10px;">
+                  <button onclick="eliminarServicioAdmin('${profId}', '${s.id}')" style="background:#e74c3c; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">
+                    Eliminar
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch(e) {
+    console.error('Error cargando servicios:', e);
+    container.innerHTML = '<p class="error">Error al cargar servicios.</p>';
+  }
+}
+
+window.eliminarServicioAdmin = async function(profId, servId) {
+  if (!confirm('¿Seguro que querés eliminar este servicio?')) return;
+  try {
+    await deleteDoc(doc(db, `profesionales/${profId}/servicios`, servId));
+    alert('Servicio eliminado.');
+    cargarServiciosDelProfesional(profId);
+  } catch(e) {
+    console.error('Error al eliminar servicio:', e);
+    alert('Error al eliminar.');
+  }
+};
+
+// -------------------------------------------------------------------
+// 7. GESTIÓN DE HORARIOS
+// -------------------------------------------------------------------
+function configurarGestionHorarios() {
+  const selectProf = document.getElementById('horariosProfSelect');
+  const formHorarios = document.getElementById('formConfigHorarios');
+
+  if (selectProf) {
+    selectProf.addEventListener('change', (e) => {
+      cargarHorariosDelProfesional(e.target.value);
+    });
+  }
+
+  if (formHorarios) {
+    formHorarios.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const profId = selectProf.value;
+      if (!profId) {
+        alert('Por favor seleccioná un profesional.');
+        return;
+      }
+
+      try {
+        const btnSubmit = formHorarios.querySelector('button[type="submit"]');
+        if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = 'Guardando...'; }
+
+        for (const dia of DIAS_SEMANA) {
+          const activo = document.getElementById(`horario_activo_${dia.key}`)?.checked ?? true;
+          const horaInicio = document.getElementById(`horario_inicio_${dia.key}`)?.value || '09:00';
+          const horaFin = document.getElementById(`horario_fin_${dia.key}`)?.value || '19:00';
+
+          await setDoc(doc(db, `profesionales/${profId}/horarios`, dia.key), {
+            activo,
+            horaInicio,
+            horaFin,
+            intervaloMin: 30
+          }, { merge: true });
+        }
+
+        alert('¡Horarios actualizados con éxito!');
+        if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = 'Guardar Horarios'; }
+      } catch(err) {
+        console.error('Error al guardar horarios:', err);
+        alert('Error al guardar los horarios.');
+      }
+    });
+  }
+}
+
+function poblarSelectProfesionalesHorarios() {
+  const selectProf = document.getElementById('horariosProfSelect');
+  if (!selectProf) return;
+  selectProf.innerHTML = '<option value="">Seleccionar profesional...</option>' + 
+    barberia.profesionales.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+  document.getElementById('horariosDiasContainer').innerHTML = '';
+}
+
+async function cargarHorariosDelProfesional(profId) {
+  const container = document.getElementById('horariosDiasContainer');
+  if (!container) return;
+
+  if (!profId) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = '<p style="grid-column:1/-1; padding:10px; color:#888;">Cargando horarios...</p>';
+
+  try {
+    const horariosMap = {};
+    for (const dia of DIAS_SEMANA) {
+      const snap = await getDoc(doc(db, `profesionales/${profId}/horarios`, dia.key));
+      horariosMap[dia.key] = snap.exists() ? snap.data() : { activo: true, horaInicio: '09:00', horaFin: '19:00' };
+    }
+
+    container.innerHTML = DIAS_SEMANA.map(d => {
+      const h = horariosMap[d.key];
+      return `
+        <div style="background:#f8f9fa; padding:15px; border-radius:6px; border:1px solid #e0e0e0;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <strong style="font-size:15px; color:#2c3e50;">${d.label}</strong>
+            <label style="font-size:13px; cursor:pointer;">
+              <input type="checkbox" id="horario_activo_${d.key}" ${h.activo ? 'checked' : ''}> Habilitado
+            </label>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <small style="color:#666;">Desde:</small>
+              <input type="time" id="horario_inicio_${d.key}" class="form-control" value="${h.horaInicio || '09:00'}">
+            </div>
+            <div style="flex:1;">
+              <small style="color:#666;">Hasta:</small>
+              <input type="time" id="horario_fin_${d.key}" class="form-control" value="${h.horaFin || '19:00'}">
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch(e) {
+    console.error('Error al cargar horarios:', e);
+    container.innerHTML = '<p class="error">Error al cargar horarios.</p>';
+  }
+}
+
+// -------------------------------------------------------------------
+// Cargar Datos Globales de Barbería
 // -------------------------------------------------------------------
 async function cargarDatosBarberia() {
   try {
@@ -724,46 +923,36 @@ async function cargarDatosBarberia() {
       barberia.servicios[prof.id] = servSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     }
 
-    poblarSelectsProfesionales();
+    // Poblar select de profesionales en formulario de reserva admin
+    const selectProfAdmin = document.getElementById('adminSelectProfesional');
+    const filtroProf = document.getElementById('filtroProfesional');
+
+    if (selectProfAdmin) {
+      selectProfAdmin.innerHTML = '<option value="">Seleccionar...</option>' + 
+        barberia.profesionales.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join('');
+    }
+
+    if (filtroProf) {
+      filtroProf.innerHTML = '<option value="">Todos los profesionales</option>' + 
+        barberia.profesionales.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join('');
+    }
+
+    // Poblar select de servicios dinámicamente al cambiar el profesional en el formulario de reserva
+    if (selectProfAdmin) {
+      selectProfAdmin.addEventListener('change', (e) => {
+        const profNombre = e.target.value;
+        const profObj = barberia.profesionales.find(p => p.nombre === profNombre);
+        const selectServAdmin = document.getElementById('adminSelectServicio');
+
+        if (selectServAdmin && profObj) {
+          const servicios = barberia.servicios[profObj.id] || [];
+          selectServAdmin.innerHTML = '<option value="">Seleccionar...</option>' + 
+            servicios.map(s => `<option value="${s.nombre}">${s.nombre} ($${s.precio})</option>`).join('');
+        }
+      });
+    }
+
   } catch(e) {
     console.error('Error cargando datos de barbería:', e);
   }
-}
-
-function poblarSelectsProfesionales() {
-  const selectFiltro = document.getElementById('filtroProfesional');
-  const selectAdmin = document.getElementById('adminSelectProfesional');
-
-  if (selectFiltro) {
-    selectFiltro.innerHTML = '<option value="">Todos los profesionales</option>';
-    barberia.profesionales.forEach(p => {
-      selectFiltro.innerHTML += `<option value="${p.nombre}">${p.nombre}</option>`;
-    });
-  }
-
-  if (selectAdmin) {
-    selectAdmin.innerHTML = '<option value="">Seleccionar...</option>';
-    barberia.profesionales.forEach(p => {
-      selectAdmin.innerHTML += `<option value="${p.nombre}" data-id="${p.id}">${p.nombre}</option>`;
-    });
-
-    selectAdmin.addEventListener('change', (e) => {
-      const selectedOption = e.target.options[e.target.selectedIndex];
-      const profId = selectedOption.dataset.id;
-      poblarSelectServicios(profId);
-    });
-  }
-}
-
-function poblarSelectServicios(profId) {
-  const selectServ = document.getElementById('adminSelectServicio');
-  if (!selectServ) return;
-
-  selectServ.innerHTML = '<option value="">Seleccionar...</option>';
-  if (!profId) return;
-
-  const servicios = barberia.servicios[profId] || [];
-  servicios.forEach(s => {
-    selectServ.innerHTML += `<option value="${s.nombre}">${s.nombre} ($${s.precio || 0})</option>`;
-  });
 }
